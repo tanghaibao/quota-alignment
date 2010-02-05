@@ -4,7 +4,17 @@
  *         Jean-Francios Gibrat.
  *
  * Modified by Haibao Tang (bao@uga.edu) April 26, 2007
- * to use dynamic memory alloc
+ * 1. use dynamic memory alloc
+ * 2. use edge list since most graphs we deal with are sparse
+ *
+ * Input file format is the following:
+ * (assume number of nodes N, size-K cliques to report)
+ *
+ * N K
+ * v1 v2
+ * v3 v4
+ * ...
+ * pairs of nodes numbered between 0 and N-1
  *
  */
 
@@ -53,30 +63,40 @@ void init_memory()
 
 void read_graph()
 {
-    int i, j;
+    int i, j, a, b;
 
-    scanf("%d%d\n", &num_nodes, &K);
+    /* first row contains N (number of nodes) and K (minimum size clique to report) */
+    scanf("%d%d", &num_nodes, &K);
     fprintf(stderr, "Number of nodes in the graph: %d\n", num_nodes);
 
-    char *line; /* line buffer */
-    AllocArray(line, num_nodes + 10);
     init_memory();
 
     for (i = 0; i <= num_nodes; i++)
+    {
         for (j = 0; j <= num_nodes; j++)
             connected[i][j] = '0';
+        connected[i][i] = '1';
+    }
 
+    while (scanf("%d%d", &a, &b)==2)
+    {
+
+        a++;
+        b++;
+
+        connected[a][b] = '1';
+        connected[b][a] = '1';
+    }
+
+#if 0
     for (i = 1; i <= num_nodes; i++)
     {
-        connected[i][i] = '1';
-        fgets(line, num_nodes + 10, stdin);
-
-        for (j = i+1; j <= num_nodes; j++)
-        {
-            connected[i][j] = line[j-1];
-            connected[j][i] = line[j-1];
-        }
+        for (j = 1; j <= num_nodes; j++)
+            fprintf(stdout, "%c", connected[i][j]);
+        fprintf(stdout, "\n");
     }
+    exit(1);
+#endif
 
 }
 

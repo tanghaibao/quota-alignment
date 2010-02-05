@@ -326,15 +326,17 @@ if __name__ == '__main__':
 
     usage = "usage: %prog [options] dag_file bounds_file"
     parser = OptionParser(usage)
-    parser.add_option("-r", "--relax_overlap", dest="Nmax",
-            action="store", type="int", default=40,
-            help="define overlap between clusters that within less than certain distance")
     parser.add_option("-m", "--merge_bounds", dest="merge",
             action="store_true", default=False,
             help="merge clusters that are explained by local inversions")
-    parser.add_option("-s", "--screen_bounds", dest="screen",
-            action="store_true", default=False,
-            help="screen blocks to get one-on-one mapping (best orthology)")
+    parser.add_option("-r", "--relax_overlap", dest="Nmax", 
+            type="int", default=40,
+            help="define overlap between clusters that within less than certain distance"\
+                    " [default: %default gene steps]")
+    parser.add_option("-c", "--constraint", dest="quota", 
+            type="string", default="1:1",
+            help="screen blocks to constrain mapping (often to find orthology)"\
+                    " [default: %default]")
 
     (options, args) = parser.parse_args()
 

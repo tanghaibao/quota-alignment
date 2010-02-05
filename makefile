@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3 -Wall -ansi
+CFLAGS=-O3 -Wall -ansi -pedantic-errors
 PROG=bk_cliques
 
 $(PROG): $(PROG).c
@@ -7,5 +7,5 @@ $(PROG): $(PROG).c
 
 test:
 	$(MAKE)
-	$(PROG) <toy_matrix
+	$(PROG) <toydata
 
