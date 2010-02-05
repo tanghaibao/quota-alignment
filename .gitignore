@@ -1,0 +1,7 @@
+*
+!*.py
+!*.c
+!*.rst
+!makefile
+!aligncoords.orig
+!.gitignore
