@@ -7,8 +7,8 @@ this python program can do two things:
 2. formatted input and feed into the max independent set solver.
 
 a dag file looks like:
-## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): a3068_scaffold_1        
-scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||30767256||87.37 140     140     b8_1    1||427548||427811||AT1G02210||-1||CDS||20183105||87.37     172     172     1.000000e-250   50
+## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): 
+a3068_scaffold_1        scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||30767256||87.37 140     140     b8_1    1||427548||427811||AT1G02210||-1||CDS||20183105||87.37     172     172     1.000000e-250   50
 
 a plain cluster file looks like:
 # mergedcluster score 1263.482
@@ -20,6 +20,7 @@ a plain cluster file looks like:
 import sys
 import pprint
 import cStringIO
+import operator
 from mystruct import Grouper
 from subprocess import Popen, PIPE
 from optparse import OptionParser
@@ -141,7 +142,11 @@ def recursive_merge_clusters(chain, clusters):
     return chain, clusters
 
 
-#___formulate linear programming instance___________________________________
+#___populate the constraints based on 1D overlap_____________________________
+
+
+
+#___formulate linear programming instance____________________________________
 
 def construct_graph(clusters):
 
@@ -183,10 +188,6 @@ def format_lp(nodes, edges):
 
     Subject To
      r_1: x(1) + x(2) <= 1
-
-    Bounds
-     0 <= x(1) <= 1
-     0 <= x(2) <= 1
 
     End
     
@@ -275,6 +276,11 @@ def max_ind_set(clusters):
 
 def read_dag(filename):
 
+    """
+## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): 
+a3068_scaffold_1        scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||30767256||87.37 140     140     b8_1    1||427548||427811||AT1G02210||-1||CDS||20183105||87.37     172     172     1.000000e-250   50
+    """
+
     fp = file(filename)
 
     # clusters contain only bounds, point_clusters contain all points
@@ -293,10 +299,12 @@ def read_dag(filename):
         while row and row[0]!="#":
             atoms = row.strip().split("\t")
             if row.strip()=="": break
-            ca, _, a, _, cb, _, b, _, _ = atoms
+            ca, _, a, _, cb, _, b, _, _, score = atoms
             a, b = int(a), int(b)
+            # for the score, keep two-digit precision
+            score = int(float(score)*100)
             gene1, gene2 = (ca, a), (cb, b)
-            cluster.append((gene1, gene2, 0))
+            cluster.append((gene1, gene2, score))
             row = fp.readline()
 
         clusters.append(cluster)
@@ -372,7 +380,7 @@ if __name__ == '__main__':
 
     pprint.pprint(clusters)
 
-    if not options.screen: sys.exit(0)
+    if not options.quota: sys.exit(0)
 
     clusters = max_ind_set(clusters)
 
