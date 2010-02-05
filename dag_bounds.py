@@ -6,9 +6,14 @@ this python program can do two things:
 1. merge dags by recursively merging dag bounds
 2. formatted input and feed into the max independent set solver.
 
-dag file looks like
+a dag file looks like:
 ## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): a3068_scaffold_1        
 scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||30767256||87.37 140     140     b8_1    1||427548||427811||AT1G02210||-1||CDS||20183105||87.37     172     172     1.000000e-250   50
+
+a plain cluster file looks like:
+# mergedcluster score 1263.482
+2       2840    3       3880    1.647
+2       2859    3       3867    2.560
 
 """
 
@@ -19,37 +24,7 @@ from mystruct import Grouper
 from subprocess import Popen, PIPE
 from optparse import OptionParser
 
-
-def read_dag(filename):
-
-    fp = file(filename)
-
-    # clusters contain only bounds, point_clusters contain all points
-    clusters = [] 
-    
-    total_lines = sum(1 for row in fp)
-    print >>sys.stderr, "total lines in dag file (%d)" % total_lines
-    fp.seek(0)
-    row = fp.readline()
-    j = 1
-    while row:
-        if row.strip()=="": break
-        synteny_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
-        row = fp.readline()
-        cluster = []
-        while row and row[0]!="#":
-            atoms = row.strip().split("\t")
-            if row.strip()=="": break
-            ca, _, a, _, cb, _, b, _, _ = atoms
-            a, b = int(a), int(b)
-            gene1, gene2 = (ca, a), (cb, b)
-            cluster.append((gene1, gene2, 0))
-            row = fp.readline()
-
-        clusters.append(cluster)
-
-    return clusters
-
+#___helper functions_______________________________________________________
 
 def distance(gene1, gene2):
     chr1, pos1 = gene1
@@ -84,6 +59,32 @@ def distance_y(cluster_i, cluster_j):
 
     return min(del_y1, del_y2, del_y3, del_y4)
 
+
+def range_overlap(rangei, rangej):
+
+    amin, amax = rangei
+    bmin, bmax = rangej
+
+    # chromosomes must match
+    if amin[0]!=bmin[0]: return False
+    Kmax = min(amax[1]-amin[1], bmax[1]-bmin[1], Nmax/2)
+    # to cope with ends that slightly overlap
+    # but the overlap needs to be less than half of either segment
+    return (amin[1] <= bmax[1] - Kmax) \
+            and (bmin[1] <= amax[1] - Kmax)
+
+
+def box_overlap(nodei, nodej):
+
+    for rangei in nodei[:2]:
+        for rangej in nodej[:2]:
+            if range_overlap(rangei, rangej):
+                return True
+
+    return False
+
+
+#___merge clusters to combine inverted blocks______________________________
 
 def merge_clusters(chain, clusters):
 
@@ -140,29 +141,7 @@ def recursive_merge_clusters(chain, clusters):
     return chain, clusters
 
 
-def range_overlap(rangei, rangej):
-
-    amin, amax = rangei
-    bmin, bmax = rangej
-
-    # chromosomes must match
-    if amin[0]!=bmin[0]: return False
-    Kmax = min(amax[1]-amin[1], bmax[1]-bmin[1], Nmax/2)
-    # to cope with ends that slightly overlap
-    # but the overlap needs to be less than half of either segment
-    return (amin[1] <= bmax[1] - Kmax) \
-            and (bmin[1] <= amax[1] - Kmax)
-
-
-def box_overlap(nodei, nodej):
-
-    for rangei in nodei[:2]:
-        for rangej in nodej[:2]:
-            if range_overlap(rangei, rangej):
-                return True
-
-    return False
-
+#___formulate linear programming instance___________________________________
 
 def construct_graph(clusters):
 
@@ -292,7 +271,38 @@ def max_ind_set(clusters):
     return filtered_clusters
 
 
-### Output rountines
+#___I/O routines________________________________________________________
+
+def read_dag(filename):
+
+    fp = file(filename)
+
+    # clusters contain only bounds, point_clusters contain all points
+    clusters = [] 
+    
+    total_lines = sum(1 for row in fp)
+    print >>sys.stderr, "total lines in dag file (%d)" % total_lines
+    fp.seek(0)
+    row = fp.readline()
+    j = 1
+    while row:
+        if row.strip()=="": break
+        synteny_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
+        row = fp.readline()
+        cluster = []
+        while row and row[0]!="#":
+            atoms = row.strip().split("\t")
+            if row.strip()=="": break
+            ca, _, a, _, cb, _, b, _, _ = atoms
+            a, b = int(a), int(b)
+            gene1, gene2 = (ca, a), (cb, b)
+            cluster.append((gene1, gene2, 0))
+            row = fp.readline()
+
+        clusters.append(cluster)
+
+    return clusters
+
 
 def write_chain(fw_chain, chain, clusters):
 
@@ -322,21 +332,26 @@ def write_bounds(filehandle, clusters):
     pass
 
 
+#________________________________________________________________________
+
 if __name__ == '__main__':
 
     usage = "usage: %prog [options] dag_file bounds_file"
     parser = OptionParser(usage)
     parser.add_option("-m", "--merge_bounds", dest="merge",
             action="store_true", default=False,
-            help="merge clusters that are explained by local inversions")
+            help="merge clusters that are explained by local inversions "\
+                    "[default: %default]")
     parser.add_option("-r", "--relax_overlap", dest="Nmax", 
             type="int", default=40,
-            help="define overlap between clusters that within less than certain distance"\
-                    " [default: %default gene steps]")
+            help="merge clusters that within less than certain distance "\
+                    "[default: %default gene steps] ")
     parser.add_option("-c", "--constraint", dest="quota", 
             type="string", default="1:1",
-            help="screen blocks to constrain mapping (often to find orthology)"\
-                    " [default: %default]")
+            help="screen blocks to constrain mapping (useful to find orthology), "\
+                    "put in the format like (#subgenomes expected for genome x):"\
+                    "(#subgenomes expected for genome y) "\
+                    "[default: %default]")
 
     (options, args) = parser.parse_args()
 

@@ -1,27 +1,3 @@
-# Helper functions in the blast filtering
-def gene_name(st):
-    # this is ugly, but different groups are inconsistent
-    # with how the alternative splicings are named;
-    # mostly it can be done by removing the suffix
-    # except for papaya (evm...) and maize (somewhat complicated)
-    # TODO: maize rules
-    if st.startswith("ev"):
-        return st
-    if st.startswith("Os"):
-        return st.rsplit("-",1)[0]
-    return st.rsplit(".", 1)[0]
-
-# colored output
-def colored_text(st, color="yellow"):
-    color_supported = "gray|red|green|yellow|blue|magenta|cyan|white|crimson"
-    color_supported = color_supported.split("|")
-    if color not in color_supported:
-        return st
-
-    color_instances = dict(zip(color_supported, range(30, 39)))
-    # \033[1;??m, ?? can range from 30 to 48
-    return '\033[1;%dm%s\033[1;m' % (color_instances[color], st)
-
 """
 Disjoint set data structure [http://code.activestate.com/recipes/387776/]
 """
