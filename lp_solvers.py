@@ -73,8 +73,8 @@ class GLPKSolver(AbstractMIPSolver):
         try:
             proc = Popen("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
                     (lpfile, outfile, listfile), shell=True)
-        except OSError as detail:
-            print >>sys.stderr, "Error:", detail
+        except OSError:
+            print >>sys.stderr, "Error:"
             print >>sys.stderr, "You need to install program `glpsol' on your path"
             print >>sys.stderr, "[http://www.gnu.org/software/glpk/]"
             sys.exit(1)
@@ -111,8 +111,8 @@ class SCIPSolver(AbstractMIPSolver):
         try:
             proc = Popen("scip -f %s -l %s" % \
                     (lpfile, outfile), shell=True)
-        except OSError as detail:
-            print >>sys.stderr, "Error:", detail
+        except OSError:
+            print >>sys.stderr, "Error:"
             print >>sys.stderr, "You need to install program `scip' on your path"
             print >>sys.stderr, "[http://scip.zib.de/]"
             sys.exit(1)

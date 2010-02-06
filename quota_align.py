@@ -16,6 +16,7 @@ from optparse import OptionParser
 
 from grouper import Grouper
 from cluster_utils import read_clusters, write_clusters
+from clq_solvers import BKSolver
 from lp_solvers import GLPKSolver, SCIPSolver
 
 
@@ -139,9 +140,9 @@ def recursive_merge_clusters(chain, clusters):
     return chain, clusters
 
 
-#___formulate linear programming instance____________________________________
+#___populate conflict graph before sending into MIP solver__________________________
 
-def construct_graph(clusters):
+def construct_conflict_graph(clusters):
 
     # check pairwise cluster comparison, if they overlap then mark edge as `conflict'
 
@@ -153,39 +154,71 @@ def construct_graph(clusters):
     for i in xrange(nnodes):
         for j in xrange(i+1, nnodes):
             if box_relaxed_overlap(eclusters[i], eclusters[j]): 
-                edges.append((i+1, j+1))
+                edges.append((i, j))
 
     return nodes, edges
 
 
-def format_lp(nodes, edges):
+def format_clq(nodes, edges):
+    
+    """
+    Example:
+
+    5 0
+    0 1
+    0 2
 
     """
-    \* Problem: lp_test *\
+    clq_handle = cStringIO.StringIO()
+    clq_handle.write("%d %d\n" % (len(nodes), 1))
+    for i, j in edges:
+        clq_handle.write("%d %d\n" % (i, j))
+
+    clq_data = clq_handle.getvalue()
+    clq_handle.close()
+
+    return clq_data
+
+
+def populate_constraints(clq_data):
+
+    # identify maximal cliques in the conflict graph
+    # there are quota limits on each clique
+
+    constraints = BKSolver(clq_data).results
+    
+    return constraints
+
+
+#___formulate mixed integer programming instance____________________________________
+
+def format_lp(nodes, constraints):
+
+    """
+    Example:
 
     Maximize
-     obj: x(1) + 2 x(2) + 3 x(3) + 4 x(4)
-
+     4 x1 + 2 x2 + 3 x3 + x4
     Subject To
-     r_1: x(1) + x(2) <= 1
-
+     x1 + x2 <= 1
     End
     
     """
     lp_handle = cStringIO.StringIO()
 
-    lp_handle.write("Maximize\n obj: ")
+    lp_handle.write("Maximize\n ")
     for i, score in nodes:
         lp_handle.write("+ %d x%d " % (score, i))
     lp_handle.write("\n")
     
     lp_handle.write("Subject To\n")
-    for edge in edges:
-        lp_handle.write(" x%d + x%d <= 1 \n" % edge)
+    for c in constraints:
+        additions = " + ".join("x%d" % (x+1) for x in c)
+        lp_handle.write(" %s <= 1\n" % additions)
 
     lp_handle.write("Binary\n")
     for i, score in nodes:
-        lp_handle.write(" x%d \n" %i )
+        lp_handle.write(" x%d\n" %i )
     
     lp_handle.write("End\n")
 
@@ -197,9 +230,13 @@ def format_lp(nodes, edges):
 
 def solve_lp(clusters, solver="SCIP"):
     
-    nodes, edges = construct_graph(clusters)
+    nodes, edges = construct_conflict_graph(clusters)
+    clq_data = format_clq(nodes, edges)
 
-    lp_data = format_lp(nodes, edges)
+    #constraints = edges
+    constraints = populate_constraints(clq_data)
+
+    lp_data = format_lp(nodes, constraints)
     if solver=="SCIP":
         filtered_list = SCIPSolver(lp_data).results
     elif solver=="GLPK":
@@ -227,16 +264,17 @@ if __name__ == '__main__':
     parser.add_option("-n", "--Nmax", dest="Nmax", 
             type="int", default=20,
             help="distance cutoff to determine whether two blocks are overlapping "\
-                    "[default: %default gene steps] ")
+                    "[default: %default genes] ")
     parser.add_option("-q", "--quota", dest="quota", 
             type="string", default="1:1",
             help="screen blocks to constrain mapping (sometimes useful for orthology), "\
-                    "put in the format like (#subgenomes expected for genome x):"\
-                    "(#subgenomes expected for genome y) "\
+                    "put in the format like (#subgenomes expected for genome X):"\
+                    "(#subgenomes expected for genome Y) "\
                     "[default: %default]")
     parser.add_option("-s", "--solver", dest="solver",
             type="string", default="SCIP",
-            help="use MIP solver, only SCIP or GLPK are currently implemented")
+            help="use MIP solver, only SCIP or GLPK are currently implemented "\
+                    "[default: %default]")
 
     (options, args) = parser.parse_args()
 

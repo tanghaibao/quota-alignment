@@ -64,8 +64,8 @@ class BKSolver(AbstractCLQSolver):
         try:
             proc = Popen("bk_cliques <%s >%s" % \
                     (clqfile, outfile), shell=True)
-        except OSError as detail:
-            print >>sys.stderr, "Error:", detail
+        except OSError:
+            print >>sys.stderr, "Error:"
             print >>sys.stderr, "You need to install program `bk_cliques' on your path"
             print >>sys.stderr, "it should come with this package, " \
                     "type `make' and then copy the binary to your path"

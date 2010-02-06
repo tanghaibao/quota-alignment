@@ -17,4 +17,6 @@ Dependencies:
 Usage
 -----
 
-
+Reference
+---------
+Tang et al. Guided synteny alignment between duplicated genomes. (in preparation)
