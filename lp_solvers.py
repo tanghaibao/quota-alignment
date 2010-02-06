@@ -6,6 +6,8 @@ Implement a few MIP solvers,
 based on benchmark @ http://scip.zib.de/
 SCIP solver is faster than GLPK solver
 
+The input lp_data is assumed in .lp format, see below
+
 Example:
 
 >>> lp_data = '''
@@ -61,10 +63,12 @@ class GLPKSolver(AbstractMIPSolver):
 
     def run(self, lpfile, work_dir="work"):
 
-        outfile = work_dir + "/data.out" # verbose output
-        listfile = work_dir +"/data.list" # simple output
-        os.remove(outfile)
-        os.remove(listfile)
+        outfile = work_dir + "/data.lp.out" # verbose output
+        listfile = work_dir +"/data.lp.list" # simple output
+        # cleanup in case something wrong happens
+        for f in (outfile, listfile):
+            if os.path.exists(f): 
+                os.remove(f)
 
         try:
             proc = Popen("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
@@ -100,8 +104,9 @@ class SCIPSolver(AbstractMIPSolver):
     
     def run(self, lpfile, work_dir="work"):
 
-        outfile = work_dir + "/data.out" # verbose output
-        os.remove(outfile)
+        outfile = work_dir + "/data.lp.out" # verbose output
+        if os.path.exists(outfile): 
+            os.remove(outfile)
 
         try:
             proc = Popen("scip -f %s -l %s" % \
@@ -130,7 +135,7 @@ class SCIPSolver(AbstractMIPSolver):
             #x2                             1   (obj:3)
             if row.strip()=="": break # blank line ends the section
             x = row.split()[0]
-            results.append(int(x[1:])-1)
+            results.append(int(x[1:])-1) # 0-based indexing
 
         return results
 

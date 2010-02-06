@@ -195,13 +195,15 @@ def format_lp(nodes, edges):
     return lp_data
 
 
-def solve_lp(clusters):
+def solve_lp(clusters, solver="SCIP"):
     
     nodes, edges = construct_graph(clusters)
 
     lp_data = format_lp(nodes, edges)
-    #filtered_list = GLPKSolver(lp_data).results
-    filtered_list = SCIPSolver(lp_data).results
+    if solver=="SCIP":
+        filtered_list = SCIPSolver(lp_data).results
+    elif solver=="GLPK":
+        filtered_list = GLPKSolver(lp_data).results
     
     # non-overlapping set on both axis
     filtered_clusters = [clusters[x] for x in filtered_list]
@@ -232,6 +234,9 @@ if __name__ == '__main__':
                     "put in the format like (#subgenomes expected for genome x):"\
                     "(#subgenomes expected for genome y) "\
                     "[default: %default]")
+    parser.add_option("-s", "--solver", dest="solver",
+            type="string", default="SCIP",
+            help="use MIP solver, only SCIP or GLPK are currently implemented")
 
     (options, args) = parser.parse_args()
 
@@ -239,6 +244,11 @@ if __name__ == '__main__':
         cluster_file = args[0]
     except:
         sys.exit(parser.print_help())
+
+    # option sanity check
+    solver_options = ("SCIP", "GLPK")
+    assert options.solver in solver_options, \
+            "solver must be one of %s" % solver_options
 
     clusters = read_clusters(cluster_file)
 
@@ -254,7 +264,7 @@ if __name__ == '__main__':
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
 
-    clusters = solve_lp(clusters)
+    clusters = solve_lp(clusters, solver=options.solver)
 
     filtered_cluster_file = cluster_file + ".filtered"
     fw = file(filtered_cluster_file, "w")
