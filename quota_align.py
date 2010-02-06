@@ -228,8 +228,9 @@ def format_lp(nodes, constraints):
     return lp_data
 
 
-def solve_lp(clusters, solver="SCIP"):
+def solve_lp(clusters, quota, solver="SCIP"):
     
+    qa, qb = quota
     nodes, edges = construct_conflict_graph(clusters)
     clq_data = format_clq(nodes, edges)
 
@@ -288,12 +289,22 @@ if __name__ == '__main__':
     assert options.solver in solver_options, \
             "solver must be one of %s" % solver_options
 
+    try:
+        qa, qb = options.quota.split(":")
+        qa, qb = int(qa), int(qb)
+    except:
+        print >>sys.stderr, "quota string should be the form x:x (like 2:4, 1:3, etc.)"
+        sys.exit(1)
+
+    assert qa <= 12 and qb <= 12, \
+            "quota %s set too loose, make quota less than 12 each" % options.quota
+    quota = (qa, qb)
+
     clusters = read_clusters(cluster_file)
 
     Nmax = options.Nmax
 
     if options.merge: 
-            
         chain = range(len(clusters))
         chain, clusters = recursive_merge_clusters(chain, clusters)
 
@@ -302,7 +313,7 @@ if __name__ == '__main__':
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
 
-    clusters = solve_lp(clusters, solver=options.solver)
+    clusters = solve_lp(clusters, quota, solver=options.solver)
 
     filtered_cluster_file = cluster_file + ".filtered"
     fw = file(filtered_cluster_file, "w")

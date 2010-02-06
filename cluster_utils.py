@@ -71,27 +71,27 @@ def read_clusters(filename, precision=1, dag_fmt=False):
 def write_clusters(filehandle, clusters):
     for cluster in clusters:
         cluster_score = sum(x[-1] for x in cluster)
-        filehandle.write("# cluster score %.3f \n" % (cluster_score)) 
-        for gene1, gene2, synteny_score in cluster:
+        filehandle.write("# cluster score %d \n" % (cluster_score)) 
+        for gene1, gene2, score in cluster:
             filehandle.write("%s\t%d\t" % gene1 )
             filehandle.write("%s\t%d\t" % gene2 )
-            filehandle.write("%.3f\n" % synteny_score )
+            filehandle.write("%d\n" % score )
 
 
 
 if __name__ == '__main__':
 
-    usage = "Convert the .dag formatted file to a simpler .cluster file \n" \
-            "%prog [options] dag_file cluster_file "
+    usage = "Convert between .cluster (or .dag to .cluster) \n" \
+            "%prog [options] input output "
     parser = OptionParser(usage)
 
     parser.add_option("-d", "--dag", dest="dag_fmt",
-            action="store_true", default=True,
-            help="dag formatted input? [default: %default]")
+            action="store_true", default=False,
+            help="dag formatted input [default: %default]")
     parser.add_option("-p", "--precision", dest="precision",
             action="store", type="int", default=1,
             help="convert scores into int(score*precision) " \
-                "since the algorithm deal with integer numbers "\
+                "since MIP algorithm only deals with integer weights "\
                 "[default: %default]")
 
     (options, args) = parser.parse_args()
