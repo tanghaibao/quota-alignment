@@ -84,7 +84,7 @@ def make_range(clusters):
     return eclusters
 
 
-#___merge clusters to combine inverted blocks______________________________
+#___merge clusters to combine inverted blocks (optional)___________________________
 
 def merge_clusters(chain, clusters):
 
@@ -147,19 +147,23 @@ def construct_conflict_graph(clusters):
     # check pairwise cluster comparison, if they overlap then mark edge as `conflict'
 
     eclusters = make_range(clusters)
-    # (1-based index, synteny_score)
+    # (1-based index, cluster score)
     nodes = [(i+1, c[-1]) for i, c in enumerate(eclusters)]
-    edges = []
+    # represents the contraints over x-axis and y-axis
+    edges_x, edges_y = [], []
+
     nnodes = len(nodes)
     for i in xrange(nnodes):
         for j in xrange(i+1, nnodes):
-            if box_relaxed_overlap(eclusters[i], eclusters[j]): 
-                edges.append((i, j))
+            if range_relaxed_overlap(eclusters[i][0], eclusters[j][0]): 
+                edges_x.append((i, j))
+            if range_relaxed_overlap(eclusters[i][1], eclusters[j][1]): 
+                edges_y.append((i, j))
 
-    return nodes, edges
+    return nodes, edges_x, edges_y
 
 
-def format_clq(nodes, edges):
+def format_clq(nodes, edges, q):
     
     """
     Example:
@@ -170,7 +174,7 @@ def format_clq(nodes, edges):
 
     """
     clq_handle = cStringIO.StringIO()
-    clq_handle.write("%d %d\n" % (len(nodes), 1))
+    clq_handle.write("%d %d\n" % (len(nodes), q))
     for i, j in edges:
         clq_handle.write("%d %d\n" % (i, j))
 
@@ -180,19 +184,9 @@ def format_clq(nodes, edges):
     return clq_data
 
 
-def populate_constraints(clq_data):
-
-    # identify maximal cliques in the conflict graph
-    # there are quota limits on each clique
-
-    constraints = BKSolver(clq_data).results
-    
-    return constraints
-
-
 #___formulate mixed integer programming instance____________________________________
 
-def format_lp(nodes, constraints):
+def format_lp(nodes, constraints_x, qa, constraints_y, qb):
 
     """
     Example:
@@ -212,9 +206,12 @@ def format_lp(nodes, constraints):
     lp_handle.write("\n")
     
     lp_handle.write("Subject To\n")
-    for c in constraints:
+    for c in constraints_x:
         additions = " + ".join("x%d" % (x+1) for x in c)
-        lp_handle.write(" %s <= 1\n" % additions)
+        lp_handle.write(" %s <= %d\n" % (additions, qa))
+    for c in constraints_y:
+        additions = " + ".join("x%d" % (x+1) for x in c)
+        lp_handle.write(" %s <= %d\n" % (additions, qb))
 
     lp_handle.write("Binary\n")
     for i, score in nodes:
@@ -230,14 +227,15 @@ def format_lp(nodes, constraints):
 
 def solve_lp(clusters, quota, solver="SCIP"):
     
-    qa, qb = quota
-    nodes, edges = construct_conflict_graph(clusters)
-    clq_data = format_clq(nodes, edges)
+    qb, qa = quota # flip it
+    nodes, edges_x, edges_y = construct_conflict_graph(clusters)
+    clq_data_x = format_clq(nodes, edges_x, qa)
+    constraints_x = BKSolver(clq_data_x).results
 
-    #constraints = edges
-    constraints = populate_constraints(clq_data)
+    clq_data_y = format_clq(nodes, edges_y, qb)
+    constraints_y = BKSolver(clq_data_y).results
 
-    lp_data = format_lp(nodes, constraints)
+    lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
     if solver=="SCIP":
         filtered_list = SCIPSolver(lp_data).results
     elif solver=="GLPK":
@@ -249,7 +247,6 @@ def solve_lp(clusters, quota, solver="SCIP"):
     return filtered_clusters
 
 
-#________________________________________________________________________
 
 if __name__ == '__main__':
 
@@ -298,7 +295,7 @@ if __name__ == '__main__':
 
     assert qa <= 12 and qb <= 12, \
             "quota %s set too loose, make quota less than 12 each" % options.quota
-    quota = (qa, qb)
+    quota = (qa, qb) 
 
     clusters = read_clusters(cluster_file)
 
