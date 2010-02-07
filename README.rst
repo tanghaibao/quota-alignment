@@ -1,4 +1,4 @@
-Bounded synteny alignment
+Quota synteny alignment
 =========================
 
 Introduction
@@ -18,7 +18,7 @@ Usage
 -----
 - Inside this folder, type `make` and then put the compiled program `bk_cliques` on your PATH.
 
-- Look at a sample input (.dag or .cluster file), and change your file accordingly. Mostly I recommend the cluster file, with the following format:
+- Look at a sample input (.dag or .cluster file), and change your file accordingly. Mostly I recommend the cluster file, with the following format::
 
     # cluster1
     chr1 pos1 chr2 pos2 score
