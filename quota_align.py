@@ -245,7 +245,7 @@ def solve_lp(clusters, quota, solver="SCIP"):
     elif solver=="GLPK":
         filtered_list = GLPKSolver(lp_data).results
         if not filtered_list:
-            print >>sys.stderr, "GLPK fails... tryinig SCIP"
+            print >>sys.stderr, "GLPK fails... trying SCIP"
             filtered_list = SCIPSolver(lp_data).results
     
     # non-overlapping set on both axis
