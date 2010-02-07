@@ -15,6 +15,7 @@ Dependencies:
 - python version >=2.6
 
 - GNU linear programming kit GLPK [http://www.gnu.org/software/glpk/]::
+
   cd quota-alignment/
   make
   mkdir tools
@@ -29,6 +30,7 @@ Dependencies:
 
 
 - (*optional*) SCIP mixed integer programming solver linked with CLP [http://scip.zib.de/download.shtml], choose your platform::
+
   unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
   ./scip-1.2.0.linux.x86_64.gnu.opt.clp
   sudo apt-get install liblapack-dev
