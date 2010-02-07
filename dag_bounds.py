@@ -25,87 +25,90 @@ from mystruct import Grouper
 from subprocess import Popen, PIPE
 from optparse import OptionParser
 
-#___helper functions_______________________________________________________
 
-def distance(gene1, gene2):
-    chr1, pos1 = gene1
-    chr2, pos2 = gene2
-    if chr1 != chr2: return Nmax + 1 # this ensures un-chainable
-    return abs(pos1 - pos2)
-
-
-def distance_x(cluster_i, cluster_j):
-    # x-sorted
-    min_i_x, max_i_x = min(cluster_i)[0], max(cluster_i)[0]
-    min_j_x, max_j_x = min(cluster_j)[0], max(cluster_j)[0]
-
-    del_x1 = distance(min_i_x, max_j_x)
-    del_x2 = distance(max_i_x, min_j_x)
-    del_x3 = distance(min_i_x, min_j_x)
-    del_x4 = distance(max_i_x, max_j_x)
+def range_mergeable(a, b):
+    # 1-d version of box_mergeable
+    a_min, a_max = a
+    b_min, b_max = b
     
-    return min(del_x1, del_x2, del_x3, del_x4)
-
-def distance_y(cluster_i, cluster_j):
-    # y-sorted
-    min_i_y = min(cluster_i, key=operator.itemgetter(1))[1]
-    max_i_y = max(cluster_i, key=operator.itemgetter(1))[1]
-    min_j_y = min(cluster_j, key=operator.itemgetter(1))[1]
-    max_j_y = max(cluster_j, key=operator.itemgetter(1))[1]
-
-    del_y1 = distance(min_i_y, max_j_y)
-    del_y2 = distance(max_i_y, min_j_y)
-    del_y3 = distance(min_i_y, min_j_y)
-    del_y4 = distance(max_i_y, max_j_y)
-
-    return min(del_y1, del_y2, del_y3, del_y4)
+    # make sure it is end-to-end merge, and within distance cutoff
+    return min(abs(a_min-b_max), abs(a_max-b_min)) <= Nmax
 
 
-def range_overlap(rangei, rangej):
+def box_mergeable(boxa, boxb):
+    boxa_chrpair, boxa_xrange, boxa_yrange, _ = boxa
+    boxb_chrpair, boxb_xrange, boxb_yrange, _ = boxb
 
-    amin, amax = rangei
-    bmin, bmax = rangej
+    # must be the same chromosome pair
+    if boxa_chrpair!=boxb_chrpair: return False 
 
-    # chromosomes must match
-    if amin[0]!=bmin[0]: return False
-    Kmax = min(amax[1]-amin[1], bmax[1]-bmin[1], Nmax/2)
-    # to cope with ends that slightly overlap
-    # but the overlap needs to be less than half of either segment
-    return (amin[1] <= bmax[1] - Kmax) \
-            and (bmin[1] <= amax[1] - Kmax)
+    return range_mergeable(boxa_xrange, boxb_xrange) and \
+           range_mergeable(boxa_yrange, boxb_yrange)
 
 
-def box_overlap(nodei, nodej):
+def range_relaxed_overlap(a, b):
+    # 1-d version of box_relaxed_overlap
+    a_min, a_max = a
+    b_min, b_max = b
+    
+    # Kmax is the allowable overlap level
+    Kmax = min(a_max-a_min, b_max-b_min, Nmax)
+    # to handle ranges that slightly overlap
+    return (a_min <= b_max - Kmax) and \
+           (b_min <= a_max - Kmax)
 
-    for rangei in nodei[:2]:
-        for rangej in nodej[:2]:
-            if range_overlap(rangei, rangej):
-                return True
 
-    return False
+def box_relaxed_overlap(boxa, boxb):
+
+    boxa_chrpair, boxa_xrange, boxa_yrange, _ = boxa
+    boxb_chrpair, boxb_xrange, boxb_yrange, _ = boxb
+
+    # must be the same chromosome pair
+    if boxa_chrpair!=boxb_chrpair: return False 
+
+    return range_relaxed_overlap(boxa_xrange, boxb_xrange) or \
+           range_relaxed_overlap(boxa_yrange, boxb_yrange)
+
+
+def make_range(clusters):
+    # convert to interval ends from a list of anchors
+    eclusters = [] 
+    for cluster in clusters:
+        xlist = [a[0] for a in cluster]
+        ylist = [a[1] for a in cluster]
+        score = sum(a[-1] for a in cluster)
+        
+        xchr, xmin = min(xlist) 
+        xchr, xmax = max(xlist)
+        ychr, ymin = min(ylist) 
+        ychr, ymax = max(ylist)
+
+        eclusters.append(((xchr, ychr), (xmin, xmax), (ymin, ymax), score))
+
+
+    return eclusters
 
 
 #___merge clusters to combine inverted blocks______________________________
 
 def merge_clusters(chain, clusters):
 
-    # there are, in general, two kinds of breakpoints
-    # those that are induced by inversions, and those by translocations
+    # there are breakpoints induced by inversions and by translocations
     # inversion-breakpoints are excessive breakpoints that I want to remove
     
     chain_num = len(chain)
-    mergeables = Grouper() # disjoint sets of clusters that can be merged
-    for j in xrange(chain_num):
-        cj = chain[j]
-        mergeables.join(cj, cj)
-        for i in xrange(j-1, -1, -1):
-            ci = chain[i]
-            del_x = distance_x(clusters[ci], clusters[cj])
-            if del_x > Nmax: continue 
+    eclusters = make_range(clusters)
+    #pprint.pprint(eclusters)
 
-            del_y = distance_y(clusters[ci], clusters[cj])
-            if del_x + del_y > Nmax: continue
-            mergeables.join(ci, cj)
+    mergeables = Grouper() # disjoint sets of clusters that can be merged
+    # check all pairwise combinations
+    for i in xrange(chain_num):
+        ci = chain[i]
+        mergeables.join(ci)
+        for j in xrange(i+1, chain_num):
+            cj = chain[j]
+            if box_mergeable(eclusters[ci], eclusters[cj]):
+                mergeables.join(ci, cj)
 
     to_merge = {} 
     for mergeable in mergeables:
@@ -142,37 +145,20 @@ def recursive_merge_clusters(chain, clusters):
     return chain, clusters
 
 
-#___populate the constraints based on 1D overlap_____________________________
-
-
-
 #___formulate linear programming instance____________________________________
 
 def construct_graph(clusters):
 
-    """
-    check pairwise cluster comparison, if they overlap then print edge
-    (i.e. edges represent `conflict' clusters)
+    # check pairwise cluster comparison, if they overlap then mark edge as `conflict'
 
-    """
-
-    eclusters = [] # need ((min_x, max_x), (min_y, max_y), score) format
-    for cluster in clusters:
-        xlist = [a[0] for a in cluster]
-        ylist = [a[1] for a in cluster]
-        score = sum(a[-1] for a in cluster)
-        eclusters.append(((min(xlist), max(xlist)), \
-                (min(ylist), max(ylist)), score))
-
+    eclusters = make_range(clusters)
     # (1-based index, synteny_score)
     nodes = [(i+1, c[-1]) for i, c in enumerate(eclusters)]
     edges = []
     nnodes = len(nodes)
     for i in xrange(nnodes):
-        nodei = eclusters[i]
         for j in xrange(i+1, nnodes):
-            nodej = eclusters[j]
-            if box_overlap(nodei, nodej): 
+            if box_relaxed_overlap(eclusters[i], eclusters[j]): 
                 edges.append((i+1, j+1))
 
     return nodes, edges
@@ -293,7 +279,7 @@ a3068_scaffold_1        scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||
     j = 1
     while row:
         if row.strip()=="": break
-        synteny_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
+        #synteny_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
         row = fp.readline()
         cluster = []
         while row and row[0]!="#":
@@ -336,22 +322,18 @@ def write_clusters(filehandle, clusters):
             filehandle.write("%.3f\n" % synteny_score )
 
 
-def write_bounds(filehandle, clusters):
-    pass
-
-
 #________________________________________________________________________
 
 if __name__ == '__main__':
 
-    usage = "usage: %prog [options] dag_file bounds_file"
+    usage = "usage: %prog [options] dag_file filtered_dag_file"
     parser = OptionParser(usage)
-    parser.add_option("-m", "--merge_bounds", dest="merge",
+    parser.add_option("-m", "--merge", dest="merge",
             action="store_true", default=False,
             help="merge clusters that are explained by local inversions "\
                     "[default: %default]")
-    parser.add_option("-r", "--relax_overlap", dest="Nmax", 
-            type="int", default=40,
+    parser.add_option("-n", "--Nmax", dest="Nmax", 
+            type="int", default=20,
             help="merge clusters that within less than certain distance "\
                     "[default: %default gene steps] ")
     parser.add_option("-c", "--constraint", dest="quota", 
@@ -378,13 +360,13 @@ if __name__ == '__main__':
     chain = range(len(clusters))
     chain, clusters = recursive_merge_clusters(chain, clusters)
 
-    pprint.pprint(clusters)
+    #pprint.pprint(clusters)
 
     if not options.quota: sys.exit(0)
 
     clusters = max_ind_set(clusters)
 
     fw = file(bounds_file, "w")
-    write_clusters(sorted(clusters), fw)
+    write_clusters(fw, sorted(clusters))
 
 
