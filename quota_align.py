@@ -7,15 +7,6 @@ this python program can do two things:
 2. build conflict graph where edges represent 1d-`overlap' between blocks
 3. feed the data into the linear programming solver.
 
-a dag file looks like:
-## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): 
-a3068_scaffold_1        scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||30767256||87.37 140     140     b8_1    1||427548||427811||AT1G02210||-1||CDS||20183105||87.37     172     172     1.000000e-250   50
-
-a plain cluster file looks like:
-# mergedcluster score 1263.482
-2       2840    3       3880    1.647
-2       2859    3       3867    2.560
-
 """
 
 import sys
@@ -25,7 +16,7 @@ import operator
 from mystruct import Grouper
 from subprocess import Popen
 from optparse import OptionParser
-from dag_chainer import scoringF
+from cluster_utils import read_clusters, write_clusters
 
 
 def range_mergeable(a, b):
@@ -263,73 +254,6 @@ def solve_lp(clusters):
     return filtered_clusters
 
 
-#___I/O routines________________________________________________________
-
-def read_dag(filename, dag_fmt=True):
-
-    """
-## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): 
-a3068_scaffold_1        scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||30767256||87.37 140     140     b8_1    1||427548||427811||AT1G02210||-1||CDS||20183105||87.37     172     172     1.000000e-250   50
-    """
-
-    fp = file(filename)
-
-    # clusters contain only bounds, point_clusters contain all points
-    clusters = [] 
-    
-    total_lines = sum(1 for row in fp)
-    print >>sys.stderr, "total lines in dag file (%d)" % total_lines
-    fp.seek(0)
-    row = fp.readline()
-    j = 1
-    while row:
-        if row.strip()=="": break
-        #cluster_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
-        row = fp.readline()
-        cluster = []
-        while row and row[0]!="#":
-            atoms = row.strip().split("\t")
-            if row.strip()=="": break
-            if dag_fmt:
-                ca, _, a, _, cb, _, b, _, evalue, _ = atoms
-                score = int(scoringF(float(evalue)))
-            else: # handle my own cluster fmt
-                ca, a, cb, b, score = atoms
-                score = int(float(score) * 1000) # often synteny_score 
-            a, b = int(a), int(b)
-            gene1, gene2 = (ca, a), (cb, b)
-            cluster.append((gene1, gene2, score))
-            row = fp.readline()
-
-        clusters.append(cluster)
-
-    return clusters
-
-
-def write_chain(fw_chain, chain, clusters):
-
-    # output the anchor points in each chain
-    for c in chain:
-        lines = clusters[c]
-        print >>fw_chain, "# mergedcluster score %.3f" % sum(x[-1] for x in lines)
-        for line in lines:
-            gene1, gene2, synteny_score = line
-            chr1, pos1 = gene1
-            chr2, pos2 = gene2
-            print >>fw_chain, \
-                    "%s\t%d\t%s\t%d\t%.3f" % (chr1, pos1, chr2, pos2, synteny_score)
-
-
-def write_clusters(filehandle, clusters):
-    for cluster in clusters:
-        cluster_score = sum(x[-1] for x in cluster)
-        filehandle.write("# cluster score %.3f \n" % (cluster_score)) 
-        for gene1, gene2, synteny_score in cluster:
-            filehandle.write("%s\t%d\t" % gene1 )
-            filehandle.write("%s\t%d\t" % gene2 )
-            filehandle.write("%.3f\n" % synteny_score )
-
-
 #________________________________________________________________________
 
 if __name__ == '__main__':
@@ -337,10 +261,7 @@ if __name__ == '__main__':
     usage = "Quota synteny alignment \n" \
             "%prog [options] cluster_file "
     parser = OptionParser(usage)
-    parser.add_option("-d", "--dag", dest="dag_fmt",
-            action="store_true", default=False,
-            help="the format of the input file is dag formatted? "\
-                    "[default: %default]")
+
     parser.add_option("-m", "--merge", dest="merge",
             action="store_true", default=False,
             help="merge blocks first that are explained by local inversions, "\
@@ -364,7 +285,7 @@ if __name__ == '__main__':
     except:
         sys.exit(parser.print_help())
 
-    clusters = read_cluster(cluster_file)
+    clusters = read_clusters(cluster_file)
 
     Nmax = options.Nmax
 
@@ -375,8 +296,8 @@ if __name__ == '__main__':
 
         merged_cluster_file = cluster_file + ".merged"
         fw = file(merged_cluster_file, "w")
-        write_chain(fw, chain, clusters)
         clusters = [clusters[c] for c in chain]
+        write_clusters(fw, clusters)
 
     clusters = solve_lp(clusters)
 
