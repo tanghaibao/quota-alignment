@@ -16,15 +16,16 @@ Dependencies:
 
 Usage
 -----
-# Inside this folder, type `make` and then put the compiled program `bk_cliques` on your PATH.
+- Inside this folder, type `make` and then put the compiled program `bk_cliques` on your PATH.
 
-# Look at a sample input (.dag or .cluster file), and change your file accordingly. Mostly I recommend the cluster file, with the following format:
+- Look at a sample input (.dag or .cluster file), and change your file accordingly. Mostly I recommend the cluster file, with the following format:
+
     # cluster1
     chr1 pos1 chr2 pos2 score
     ...
     # cluster2
 
-# Run `quota_align.py` and read the possible options.
+- Run `quota_align.py` and read the possible options.
 
 also see `run.sh` for usage.
 
