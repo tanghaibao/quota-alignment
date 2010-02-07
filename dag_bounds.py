@@ -4,7 +4,8 @@
 """
 this python program can do two things:
 1. merge dags by recursively merging dag bounds
-2. formatted input and feed into the max independent set solver.
+2. build conflict graph where edges represent 1d-`overlap' between blocks
+3. feed the data into the linear programming solver.
 
 a dag file looks like:
 ## alignment a3068_scaffold_1 vs. b8_1 Alignment #1  score = 102635.0 (num aligned pairs: 2053): 
@@ -35,7 +36,8 @@ def range_mergeable(a, b):
     if a_chr!=b_chr: return False 
     
     # make sure it is end-to-end merge, and within distance cutoff
-    return min(abs(a_min-b_max), abs(a_max-b_min)) <= Nmax
+    return (a_min <= b_max + Nmax) and \
+           (b_min <= a_max + Nmax)
 
 
 def box_mergeable(boxa, boxb):
@@ -86,7 +88,6 @@ def make_range(clusters):
         ychr, ymax = max(ylist)
 
         eclusters.append(((xchr, xmin, xmax), (ychr, ymin, ymax), score))
-
 
     return eclusters
 
@@ -246,7 +247,7 @@ def parse_lp_output(listfile):
     return filtered_list
 
 
-def max_ind_set(clusters):
+def solve_lp(clusters):
     
     nodes, edges = construct_graph(clusters)
 
@@ -365,7 +366,7 @@ if __name__ == '__main__':
     write_chain(fw, chain, clusters)
 
     clusters = [clusters[c] for c in chain]
-    clusters = max_ind_set(clusters)
+    clusters = solve_lp(clusters)
 
     fw = file(bounds_file, "w")
     write_clusters(fw, sorted(clusters))
