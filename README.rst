@@ -15,7 +15,6 @@ Dependencies:
 - python version >=2.6
 
 - GNU linear programming kit GLPK [http://www.gnu.org/software/glpk/]
-::
 
   cd quota-alignment/
   make
@@ -31,7 +30,6 @@ Dependencies:
 
 
 - (*optional*) SCIP mixed integer programming solver linked with CLP [http://scip.zib.de/download.shtml], choose the binary that fits your machine
-::
 
   unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
   ./scip-1.2.0.linux.x86_64.gnu.opt.clp
@@ -45,7 +43,8 @@ Dependencies:
   cd ../
   ./lp_solvers.py
 
-- compile program `bk_cliques` shipped within this package::
+- compile program `bk_cliques` shipped within this package
+
   make
   sudo cp bk_cliques /usr/local/bin
 
