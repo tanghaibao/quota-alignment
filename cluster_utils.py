@@ -32,7 +32,7 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
     return max_match if matchScore > max_match else matchScore
 
 
-def read_clusters(filename, dag_fmt=False):
+def read_clusters(filename, precision=1, dag_fmt=False):
 
     fp = file(filename)
 
@@ -40,13 +40,13 @@ def read_clusters(filename, dag_fmt=False):
     clusters = [] 
     
     total_lines = sum(1 for row in fp)
-    print >>sys.stderr, "total lines in dag file (%d)" % total_lines
+    fmt = "dag" if dag_fmt else "cluster"
+    print >>sys.stderr, "total lines in %s file (%d)" % (fmt, total_lines)
     fp.seek(0)
     row = fp.readline()
     j = 1
     while row:
         if row.strip()=="": break
-        #cluster_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
         row = fp.readline()
         cluster = []
         while row and row[0]!="#":
@@ -57,7 +57,7 @@ def read_clusters(filename, dag_fmt=False):
                 score = int(scoringF(float(evalue)))
             else: # handle my own cluster fmt
                 ca, a, cb, b, score = atoms
-                score = int(float(score) * 1000) # often synteny_score 
+            score = int(float(score) * precision) 
             a, b = int(a), int(b)
             gene1, gene2 = (ca, a), (cb, b)
             cluster.append((gene1, gene2, score))
@@ -85,6 +85,15 @@ if __name__ == '__main__':
             "%prog [options] dag_file cluster_file "
     parser = OptionParser(usage)
 
+    parser.add_option("-d", "--dag", dest="dag_fmt",
+            action="store_true", default=True,
+            help="dag formatted input? [default: %default]")
+    parser.add_option("-p", "--precision", dest="precision",
+            action="store", type="int", default=1,
+            help="convert scores into int(score*precision) " \
+                "since the algorithm deal with integer numbers "\
+                "[default: %default]")
+
     (options, args) = parser.parse_args()
 
     try:
@@ -94,7 +103,7 @@ if __name__ == '__main__':
         sys.exit(parser.print_help())
 
     # file format conversion
-    clusters = read_clusters(dag_file, dag_fmt=True)
+    clusters = read_clusters(dag_file, options.precision, options.dag_fmt)
     fw = file(cluster_file, "w")
     write_clusters(fw, clusters)
 

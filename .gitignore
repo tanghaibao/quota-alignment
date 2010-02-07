@@ -1,6 +1,7 @@
 *
 !*.py
 !*.c
+!*.sh
 !*.rst
 !makefile
 !.gitignore

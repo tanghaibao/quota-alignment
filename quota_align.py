@@ -9,6 +9,7 @@ this python program can do two things:
 
 """
 
+import os
 import sys
 import pprint
 import cStringIO
@@ -199,20 +200,20 @@ def format_lp(nodes, edges):
     return lp_data
 
 
-def run_lp_solver(lp_data):
+def run_lp_solver(lp_data, work_dir="work"):
 
-    print >>sys.stderr, "Write problem spec to work/lp_data"
-
-    lpfile = "work/data.lp" # problem instance
-    outfile = "work/data.out" # verbose output
-    listfile = "work/data.list" # simple output
+    lpfile = work_dir + "/data.lp" # problem instance
+    outfile = work_dir + "/data.out" # verbose output
+    listfile = work_dir +"/data.list" # simple output
+    print >>sys.stderr, "Write problem spec to ", lpfile
 
     fw = file(lpfile, "w")
     fw.write(lp_data)
     fw.close()
 
     try:
-        proc = Popen("glpsol --cuts --fpump --lp work/data.lp -o %s -w %s" % (outfile, listfile), shell=True)
+        proc = Popen("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
+                (lpfile, outfile, listfile), shell=True)
     except OSError as detail:
         print >>sys.stderr, "Error:", detail
         print >>sys.stderr, "You need to install program 'glpsol' on your path"
@@ -298,6 +299,10 @@ if __name__ == '__main__':
         fw = file(merged_cluster_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
+
+    work_dir = "work"
+    if not os.path.isdir(work_dir):
+        os.mkdir(work_dir)
 
     clusters = solve_lp(clusters)
 
