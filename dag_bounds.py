@@ -22,25 +22,26 @@ import pprint
 import cStringIO
 import operator
 from mystruct import Grouper
-from subprocess import Popen, PIPE
+from subprocess import Popen
 from optparse import OptionParser
+from dag_chainer import scoringF
 
 
 def range_mergeable(a, b):
     # 1-d version of box_mergeable
-    a_min, a_max = a
-    b_min, b_max = b
+    a_chr, a_min, a_max = a
+    b_chr, b_min, b_max = b
+    # must be on the same chromosome
+    if a_chr!=b_chr: return False 
     
     # make sure it is end-to-end merge, and within distance cutoff
     return min(abs(a_min-b_max), abs(a_max-b_min)) <= Nmax
 
 
 def box_mergeable(boxa, boxb):
-    boxa_chrpair, boxa_xrange, boxa_yrange, _ = boxa
-    boxb_chrpair, boxb_xrange, boxb_yrange, _ = boxb
 
-    # must be the same chromosome pair
-    if boxa_chrpair!=boxb_chrpair: return False 
+    boxa_xrange, boxa_yrange, _ = boxa
+    boxb_xrange, boxb_yrange, _ = boxb
 
     return range_mergeable(boxa_xrange, boxb_xrange) and \
            range_mergeable(boxa_yrange, boxb_yrange)
@@ -48,10 +49,14 @@ def box_mergeable(boxa, boxb):
 
 def range_relaxed_overlap(a, b):
     # 1-d version of box_relaxed_overlap
-    a_min, a_max = a
-    b_min, b_max = b
+    a_chr, a_min, a_max = a
+    b_chr, b_min, b_max = b
+    # must be on the same chromosome
+    if a_chr!=b_chr: return False 
     
-    # Kmax is the allowable overlap level
+    # Kmax is the allowable overlap level, it is usually Nmax
+    # however some very small segments might slip through
+    # therefore we also control for the segment size
     Kmax = min(a_max-a_min, b_max-b_min, Nmax)
     # to handle ranges that slightly overlap
     return (a_min <= b_max - Kmax) and \
@@ -60,11 +65,8 @@ def range_relaxed_overlap(a, b):
 
 def box_relaxed_overlap(boxa, boxb):
 
-    boxa_chrpair, boxa_xrange, boxa_yrange, _ = boxa
-    boxb_chrpair, boxb_xrange, boxb_yrange, _ = boxb
-
-    # must be the same chromosome pair
-    if boxa_chrpair!=boxb_chrpair: return False 
+    boxa_xrange, boxa_yrange, _ = boxa
+    boxb_xrange, boxb_yrange, _ = boxb
 
     return range_relaxed_overlap(boxa_xrange, boxb_xrange) or \
            range_relaxed_overlap(boxa_yrange, boxb_yrange)
@@ -83,7 +85,7 @@ def make_range(clusters):
         ychr, ymin = min(ylist) 
         ychr, ymax = max(ylist)
 
-        eclusters.append(((xchr, ychr), (xmin, xmax), (ymin, ymax), score))
+        eclusters.append(((xchr, xmin, xmax), (ychr, ymin, ymax), score))
 
 
     return eclusters
@@ -279,16 +281,15 @@ a3068_scaffold_1        scaffold_1||548785||550552||scaffold_100153.1||-1||CDS||
     j = 1
     while row:
         if row.strip()=="": break
-        #synteny_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
+        #cluster_score = int(float(row.rsplit("(", 1)[0].split()[-1]))
         row = fp.readline()
         cluster = []
         while row and row[0]!="#":
             atoms = row.strip().split("\t")
             if row.strip()=="": break
-            ca, _, a, _, cb, _, b, _, _, score = atoms
+            ca, _, a, _, cb, _, b, _, evalue, _ = atoms
             a, b = int(a), int(b)
-            # for the score, keep two-digit precision
-            score = int(float(score)*100)
+            score = int(scoringF(float(evalue)))
             gene1, gene2 = (ca, a), (cb, b)
             cluster.append((gene1, gene2, score))
             row = fp.readline()
@@ -360,10 +361,10 @@ if __name__ == '__main__':
     chain = range(len(clusters))
     chain, clusters = recursive_merge_clusters(chain, clusters)
 
-    #pprint.pprint(clusters)
+    fw = file("merged_clusters", "w")
+    write_chain(fw, chain, clusters)
 
-    if not options.quota: sys.exit(0)
-
+    clusters = [clusters[c] for c in chain]
     clusters = max_ind_set(clusters)
 
     fw = file(bounds_file, "w")
