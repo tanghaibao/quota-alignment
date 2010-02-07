@@ -4,7 +4,9 @@
 """
 Implement a few MIP solvers,
 based on benchmark @ http://scip.zib.de/
-SCIP solver is faster than GLPK solver
+SCIP solver is ~16x faster than GLPK solver
+However, I found in rare cases it will segfault. Therefore the default is still
+GLPK solver, please switch to SCIP solver for difficult cases.
 
 The input lp_data is assumed in .lp format, see below
 
@@ -29,7 +31,7 @@ Example:
 
 import os
 import sys
-from subprocess import Popen
+from subprocess import Popen, call
 
 class AbstractMIPSolver(object):
 
@@ -46,8 +48,11 @@ class AbstractMIPSolver(object):
         fw.write(lp_data)
         fw.close()
 
-        outfile = self.run(lpfile, work_dir)
-        self.results = self.parse_output(outfile)
+        retcode, outfile = self.run(lpfile, work_dir)
+        if retcode < 0:
+            self.results = [] 
+        else:
+            self.results = self.parse_output(outfile)
 
 
     def run(self, lp_data, work_dir):
@@ -70,18 +75,16 @@ class GLPKSolver(AbstractMIPSolver):
             if os.path.exists(f): 
                 os.remove(f)
 
-        try:
-            proc = Popen("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
-                    (lpfile, outfile, listfile), shell=True)
-        except OSError:
-            print >>sys.stderr, "Error:"
+        retcode = call("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
+                (lpfile, outfile, listfile), shell=True)
+
+        if retcode==127:
+            print >>sys.stderr, "\nError:"
             print >>sys.stderr, "You need to install program `glpsol' on your path"
             print >>sys.stderr, "[http://www.gnu.org/software/glpk/]"
             sys.exit(1)
 
-        proc.communicate()
-
-        return listfile
+        return retcode, listfile
 
 
     def parse_output(self, listfile):
@@ -108,18 +111,16 @@ class SCIPSolver(AbstractMIPSolver):
         if os.path.exists(outfile): 
             os.remove(outfile)
 
-        try:
-            proc = Popen("scip -f %s -l %s" % \
-                    (lpfile, outfile), shell=True)
-        except OSError:
-            print >>sys.stderr, "Error:"
+        retcode = call("scip -f %s -l %s" % \
+                (lpfile, outfile), shell=True)
+
+        if retcode==127:
+            print >>sys.stderr, "\nError:"
             print >>sys.stderr, "You need to install program `scip' on your path"
             print >>sys.stderr, "[http://scip.zib.de/]"
             sys.exit(1)
 
-        proc.communicate()
-
-        return outfile
+        return retcode, outfile
 
 
     def parse_output(self, outfile):

@@ -238,8 +238,15 @@ def solve_lp(clusters, quota, solver="SCIP"):
     lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
     if solver=="SCIP":
         filtered_list = SCIPSolver(lp_data).results
+        if not filtered_list:
+            print >>sys.stderr, "SCIP fails... trying GLPK"
+            filtered_list = GLPKSolver(lp_data).results
+            
     elif solver=="GLPK":
         filtered_list = GLPKSolver(lp_data).results
+        if not filtered_list:
+            print >>sys.stderr, "GLPK fails... tryinig SCIP"
+            filtered_list = SCIPSolver(lp_data).results
     
     # non-overlapping set on both axis
     filtered_clusters = [clusters[x] for x in filtered_list]
@@ -265,7 +272,7 @@ if __name__ == '__main__':
                     "[default: %default genes] ")
     parser.add_option("-q", "--quota", dest="quota", 
             type="string", default="1:1",
-            help="screen blocks to constrain mapping (sometimes useful for orthology), "\
+            help="screen blocks to constrain mapping (useful for orthology), "\
                     "put in the format like (#subgenomes expected for genome X):"\
                     "(#subgenomes expected for genome Y) "\
                     "[default: %default]")

@@ -26,7 +26,7 @@ Example:
 
 import os
 import sys
-from subprocess import Popen
+from subprocess import Popen, call
 
 class AbstractCLQSolver(object):
 
@@ -61,17 +61,20 @@ class BKSolver(AbstractCLQSolver):
         if os.path.exists(outfile):
             os.remove(outfile)
 
-        try:
-            proc = Popen("bk_cliques <%s >%s" % \
-                    (clqfile, outfile), shell=True)
-        except OSError:
-            print >>sys.stderr, "Error:"
+        retcode = call("bk_cliques <%s >%s" % \
+                (clqfile, outfile), shell=True)
+
+        if retcode==127:
+            print >>sys.stderr, "\nError:"
             print >>sys.stderr, "You need to install program `bk_cliques' on your path"
             print >>sys.stderr, "it should come with this package, " \
                     "type `make' and then copy the binary to your path"
             sys.exit(1)
 
-        proc.communicate()
+        elif retcode < 0:
+            print >>sys.stderr, "\nError:"
+            print >>sys.stderr, "bk_cliques terminated unexpectedly"
+            sys.exit(1)
 
         return outfile
 
