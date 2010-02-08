@@ -1,6 +1,5 @@
-"""
-Disjoint set data structure [http://code.activestate.com/recipes/387776/]
-"""
+# Disjoint set data structure [http://code.activestate.com/recipes/387776/]
+
 class Grouper(object):
    """This class provides a lightweight way to group arbitrary objects
 together into disjoint sets when a full-blown graph data structure
@@ -26,6 +25,7 @@ True
 False
 >>> g.joined('a', 'd')
 False"""   
+
    def __init__(self, init=[]):
       mapping = self._mapping = {}
       for x in init:
@@ -77,6 +77,7 @@ False"""
        for v in self._mapping.values():
            group.update([tuple(v)])
        return len(group)
+
 
 if __name__ == '__main__':
     import doctest

@@ -9,15 +9,14 @@ this python program can do two things:
 
 """
 
-import os
 import sys
 import pprint
 import cStringIO
-import operator
-from mystruct import Grouper
-from subprocess import Popen
 from optparse import OptionParser
+
+from grouper import Grouper
 from cluster_utils import read_clusters, write_clusters
+from lp_solvers import GLPKSolver 
 
 
 def range_mergeable(a, b):
@@ -200,54 +199,12 @@ def format_lp(nodes, edges):
     return lp_data
 
 
-def run_lp_solver(lp_data, work_dir="work"):
-
-    lpfile = work_dir + "/data.lp" # problem instance
-    outfile = work_dir + "/data.out" # verbose output
-    listfile = work_dir +"/data.list" # simple output
-    print >>sys.stderr, "Write problem spec to ", lpfile
-
-    fw = file(lpfile, "w")
-    fw.write(lp_data)
-    fw.close()
-
-    try:
-        proc = Popen("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
-                (lpfile, outfile, listfile), shell=True)
-    except OSError as detail:
-        print >>sys.stderr, "Error:", detail
-        print >>sys.stderr, "You need to install program 'glpsol' on your path"
-        print >>sys.stderr, "[http://www.gnu.org/software/glpk/]"
-        sys.exit(1)
-
-    proc.communicate()
-
-    return listfile
-
-
-def parse_lp_output(listfile):
-    
-    filtered_list = []
-
-    fp = file(listfile)
-    header = fp.readline()
-    columns, rows = header.split()
-    rows = int(rows)
-    data = fp.readlines()
-    # the info are contained in the last several lines
-    filtered_list = [int(x) for x in data[-rows:]]
-    filtered_list = [i for i, x in enumerate(filtered_list) if x==1]
-
-    return filtered_list
-
-
 def solve_lp(clusters):
     
     nodes, edges = construct_graph(clusters)
 
     lp_data = format_lp(nodes, edges)
-    listfile = run_lp_solver(lp_data)
-    filtered_list = parse_lp_output(listfile)
+    filtered_list = GLPKSolver(lp_data).results
     
     # non-overlapping set on both axis
     filtered_clusters = [clusters[x] for x in filtered_list]
@@ -299,10 +256,6 @@ if __name__ == '__main__':
         fw = file(merged_cluster_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
-
-    work_dir = "work"
-    if not os.path.isdir(work_dir):
-        os.mkdir(work_dir)
 
     clusters = solve_lp(clusters)
 
