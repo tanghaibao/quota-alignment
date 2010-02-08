@@ -61,7 +61,8 @@ class BKSolver(AbstractCLQSolver):
         if os.path.exists(outfile):
             os.remove(outfile)
 
-        retcode = call("bk_cliques <%s >%s" % \
+        path = os.path.dirname(__file__)
+        retcode = call(os.path.join(path, "bk_cliques <%s >%s") % \
                 (clqfile, outfile), shell=True)
 
         if retcode==127:
