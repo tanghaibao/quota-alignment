@@ -16,7 +16,7 @@ from optparse import OptionParser
 
 from grouper import Grouper
 from cluster_utils import read_clusters, write_clusters
-from lp_solvers import GLPKSolver 
+from lp_solvers import GLPKSolver, SCIPSolver
 
 
 def range_mergeable(a, b):
@@ -173,23 +173,19 @@ def format_lp(nodes, edges):
     
     """
     lp_handle = cStringIO.StringIO()
-    lp_handle.write("\* Problem: synteny *\ \n\n")
-    
+
     lp_handle.write("Maximize\n obj: ")
     for i, score in nodes:
-        lp_handle.write("+ %d x(%d) " % (score, i))
-    lp_handle.write("\n\n")
+        lp_handle.write("+ %d x%d " % (score, i))
+    lp_handle.write("\n")
     
     lp_handle.write("Subject To\n")
-    for i, edge in enumerate(edges):
-        a, b = edge
-        lp_handle.write(" r_%d: x(%d) + x(%d) <= 1 \n" %(i, a, b))
-    lp_handle.write("\n")
+    for edge in edges:
+        lp_handle.write(" x%d + x%d <= 1 \n" % edge)
 
     lp_handle.write("Binary\n")
     for i, score in nodes:
-        lp_handle.write(" x(%d) \n" %i )
-    lp_handle.write("\n")
+        lp_handle.write(" x%d \n" %i )
     
     lp_handle.write("End\n")
 
@@ -204,7 +200,8 @@ def solve_lp(clusters):
     nodes, edges = construct_graph(clusters)
 
     lp_data = format_lp(nodes, edges)
-    filtered_list = GLPKSolver(lp_data).results
+    #filtered_list = GLPKSolver(lp_data).results
+    filtered_list = SCIPSolver(lp_data).results
     
     # non-overlapping set on both axis
     filtered_clusters = [clusters[x] for x in filtered_list]

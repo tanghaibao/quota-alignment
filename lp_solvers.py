@@ -2,21 +2,25 @@
 # -*- coding: UTF-8 -*-
 
 """
-Implement a few MIP solvers 
+Implement a few MIP solvers,
+based on benchmark @ http://scip.zib.de/
+SCIP solver is faster than GLPK solver
 
 Example:
 
 >>> lp_data = '''
 ... Maximize
-...  5 x(1) + 3 x(2) + 2 x(3)
+...  5 x1 + 3 x2 + 2 x3
 ... Subject to
-...  x(2) + x(3) <= 1
+...  x2 + x3 <= 1
 ... Binary
-...  x(1)
-...  x(2)
-...  x(3)
+...  x1
+...  x2
+...  x3
 ... End'''
 >>> print GLPKSolver(lp_data).results
+[0, 1]
+>>> print SCIPSolver(lp_data).results
 [0, 1]
 
 """
@@ -59,6 +63,8 @@ class GLPKSolver(AbstractMIPSolver):
 
         outfile = work_dir + "/data.out" # verbose output
         listfile = work_dir +"/data.list" # simple output
+        os.remove(outfile)
+        os.remove(listfile)
 
         try:
             proc = Popen("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
@@ -83,20 +89,50 @@ class GLPKSolver(AbstractMIPSolver):
         rows = int(rows)
         data = fp.readlines()
         # the info are contained in the last several lines
-        filtered_list = [int(x) for x in data[-rows:]]
-        filtered_list = [i for i, x in enumerate(filtered_list) if x==1]
+        results = [int(x) for x in data[-rows:]]
+        results = [i for i, x in enumerate(results) if x==1]
 
-        return filtered_list
+        return results
 
 
 
 class SCIPSolver(AbstractMIPSolver):
     
-    def run():
-        pass
+    def run(self, lpfile, work_dir="work"):
 
-    def parse_output():
-        pass
+        outfile = work_dir + "/data.out" # verbose output
+        os.remove(outfile)
+
+        try:
+            proc = Popen("scip -f %s -l %s" % \
+                    (lpfile, outfile), shell=True)
+        except OSError as detail:
+            print >>sys.stderr, "Error:", detail
+            print >>sys.stderr, "You need to install program `scip' on your path"
+            print >>sys.stderr, "[http://scip.zib.de/]"
+            sys.exit(1)
+
+        proc.communicate()
+
+        return outfile
+
+
+    def parse_output(self, outfile):
+
+        fp = file(outfile)
+        for row in fp:
+            if row.startswith("objective value"): break
+
+        results = []
+        for row in fp:
+            #objective value:               8
+            #x1                             1   (obj:5)
+            #x2                             1   (obj:3)
+            if row.strip()=="": break # blank line ends the section
+            x = row.split()[0]
+            results.append(int(x[1:])-1)
+
+        return results
 
 
 if __name__ == '__main__':
