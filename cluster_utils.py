@@ -46,14 +46,15 @@ def read_clusters(filename, precision=1, dag_fmt=False):
     row = fp.readline()
     j = 1
     while row:
-        if row.strip()=="": break
+        if row.strip() == "": break
         row = fp.readline()
         cluster = []
-        while row and row[0]!="#":
-            atoms = row.strip().split("\t")
-            if row.strip()=="": break
+        while row and row[0] != "#":
+            atoms = row.rstrip().split("\t")
+            if row.strip()== "": break
             if dag_fmt:
-                ca, _, a, _, cb, _, b, _, evalue, _ = atoms
+                ca, a, cb, b, evalue = atoms[0], atoms[2], atoms[4], atoms[6], atoms[8]
+                #ca, _, a, _, cb, _, b, _, evalue, _ = atoms
                 score = int(scoringF(float(evalue)))
             else: # handle my own cluster fmt
                 ca, a, cb, b, score = atoms
@@ -73,10 +74,11 @@ def write_clusters(filehandle, clusters):
         cluster_score = sum(x[-1] for x in cluster)
         filehandle.write("# cluster score %d \n" % (cluster_score)) 
         for gene1, gene2, score in cluster:
+            # gene is (name, posn)
             filehandle.write("%s\t%d\t" % gene1 )
             filehandle.write("%s\t%d\t" % gene2 )
             filehandle.write("%d\n" % score )
-
+    print >>sys.stderr, "wrote clusters to %s" % filehandle.name
 
 
 if __name__ == '__main__':
@@ -98,12 +100,15 @@ if __name__ == '__main__':
 
     try:
         dag_file = args[0]
-        cluster_file = args[1]
+        if len(args) == 2:
+            cluster_file = args[1]
+            fw = file(cluster_file, "w")
+        else:
+            fw = sys.stdout
     except:
         sys.exit(parser.print_help())
 
     # file format conversion
     clusters = read_clusters(dag_file, options.precision, options.dag_fmt)
-    fw = file(cluster_file, "w")
     write_clusters(fw, clusters)
 
