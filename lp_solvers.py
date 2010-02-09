@@ -30,13 +30,16 @@ Example:
 """
 
 import os
+import os.path as op
 import sys
-from subprocess import Popen, call
+from subprocess import call
 
 class AbstractMIPSolver(object):
 
     # Base class
-    def __init__(self, lp_data, work_dir="work"):
+    def __init__(self, lp_data,
+                 work_dir=op.join(op.dirname(__file__),"work"),
+                 verbose=False):
 
         if not os.path.isdir(work_dir):
             os.mkdir(work_dir)
@@ -48,7 +51,7 @@ class AbstractMIPSolver(object):
         fw.write(lp_data)
         fw.close()
 
-        retcode, outfile = self.run(lpfile, work_dir)
+        retcode, outfile = self.run(lpfile, work_dir, verbose=verbose)
         if retcode < 0:
             self.results = [] 
         else:
@@ -66,7 +69,7 @@ class AbstractMIPSolver(object):
 
 class GLPKSolver(AbstractMIPSolver):
 
-    def run(self, lpfile, work_dir="work"):
+    def run(self, lpfile, work_dir="work", verbose=False):
 
         outfile = work_dir + "/data.lp.out" # verbose output
         listfile = work_dir +"/data.lp.list" # simple output
@@ -75,8 +78,9 @@ class GLPKSolver(AbstractMIPSolver):
             if os.path.exists(f): 
                 os.remove(f)
 
-        retcode = call("glpsol --cuts --fpump --lp %s -o %s -w %s" % \
-                (lpfile, outfile, listfile), shell=True)
+        cmd = "glpsol --cuts --fpump --lp %s -o %s -w %s"
+        if not verbose: cmd += " >/dev/null"
+        retcode = call(cmd % (lpfile, outfile, listfile), shell=True)
 
         if retcode==127:
             print >>sys.stderr, "\nError:"
@@ -105,14 +109,16 @@ class GLPKSolver(AbstractMIPSolver):
 
 class SCIPSolver(AbstractMIPSolver):
     
-    def run(self, lpfile, work_dir="work"):
+    def run(self, lpfile, work_dir="work", verbose=False):
 
         outfile = work_dir + "/data.lp.out" # verbose output
         if os.path.exists(outfile): 
             os.remove(outfile)
 
-        retcode = call("scip -f %s -l %s" % \
-                (lpfile, outfile), shell=True)
+        cmd = "scip -f %s -l %s"
+        if not verbose:
+            cmd += " >/dev/null"
+        retcode = call(cmd % (lpfile, outfile), shell=True)
 
         if retcode==127:
             print >>sys.stderr, "\nError:"

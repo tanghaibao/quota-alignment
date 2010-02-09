@@ -70,10 +70,9 @@ def make_range(clusters):
     # convert to interval ends from a list of anchors
     eclusters = [] 
     for cluster in clusters:
-        xlist = [a[0] for a in cluster]
-        ylist = [a[1] for a in cluster]
-        score = sum(a[-1] for a in cluster)
-        
+        xlist, ylist, scores = zip(*cluster)
+        score = sum(scores)
+
         xchr, xmin = min(xlist) 
         xchr, xmax = max(xlist)
         ychr, ymin = min(ylist) 
@@ -225,7 +224,7 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     return lp_data
 
 
-def solve_lp(clusters, quota, solver="SCIP"):
+def solve_lp(clusters, quota, solver="SCIP", verbose=False):
     
     qb, qa = quota # flip it
     nodes, edges_x, edges_y = construct_conflict_graph(clusters)
@@ -237,13 +236,13 @@ def solve_lp(clusters, quota, solver="SCIP"):
 
     lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
     if solver=="SCIP":
-        filtered_list = SCIPSolver(lp_data).results
+        filtered_list = SCIPSolver(lp_data, verbose=verbose).results
         if not filtered_list:
             print >>sys.stderr, "SCIP fails... trying GLPK"
-            filtered_list = GLPKSolver(lp_data).results
+            filtered_list = GLPKSolver(lp_data, verbose=verbose).results
             
     elif solver=="GLPK":
-        filtered_list = GLPKSolver(lp_data).results
+        filtered_list = GLPKSolver(lp_data, verbose=verbose).results
         if not filtered_list:
             print >>sys.stderr, "GLPK fails... trying SCIP"
             filtered_list = SCIPSolver(lp_data).results
@@ -280,6 +279,8 @@ if __name__ == '__main__':
             type="string", default="SCIP",
             help="use MIP solver, only SCIP or GLPK are currently implemented "\
                     "[default: %default]")
+    parser.add_option("-v", dest="verbose", action="store_true", default=False,
+                      help="show verbose solver output")
 
     (options, args) = parser.parse_args()
 
@@ -305,6 +306,8 @@ if __name__ == '__main__':
     quota = (qa, qb) 
 
     clusters = read_clusters(cluster_file)
+    for cluster in clusters:
+        assert len(cluster) > 0
 
     Nmax = options.Nmax
 
@@ -317,7 +320,8 @@ if __name__ == '__main__':
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
 
-    clusters = solve_lp(clusters, quota, solver=options.solver)
+    clusters = solve_lp(clusters, quota, solver=options.solver,
+                        verbose=options.verbose)
 
     filtered_cluster_file = cluster_file + ".filtered"
     fw = file(filtered_cluster_file, "w")

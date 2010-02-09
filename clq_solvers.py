@@ -25,13 +25,15 @@ Example:
 """
 
 import os
+import os.path as op
 import sys
 from subprocess import Popen, call
 
 class AbstractCLQSolver(object):
 
     # Base class
-    def __init__(self, clq_data, work_dir="work"):
+    def __init__(self, clq_data,
+                 work_dir=op.join(op.dirname(__file__),"work")):
 
         clqfile = work_dir + "/data.clq" # problem instance
         print >>sys.stderr, "Write problem spec to ", clqfile
