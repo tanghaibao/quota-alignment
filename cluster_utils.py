@@ -53,8 +53,8 @@ def read_clusters(filename, precision=1, dag_fmt=False):
             atoms = row.rstrip().split("\t")
             if row.strip()== "": break
             if dag_fmt:
-                ca, a, cb, b, evalue = atoms[0], atoms[2], atoms[4], atoms[6], atoms[8]
-                #ca, _, a, _, cb, _, b, _, evalue, _ = atoms
+                ca, a, cb, b, evalue = atoms[0], atoms[2], atoms[4], \
+                                       atoms[6], atoms[8]
                 score = int(scoringF(float(evalue)))
             else: # handle my own cluster fmt
                 ca, a, cb, b, score = atoms
@@ -64,6 +64,7 @@ def read_clusters(filename, precision=1, dag_fmt=False):
             cluster.append((gene1, gene2, score))
             row = fp.readline()
 
+        if len(cluster) == 0: continue
         clusters.append(cluster)
 
     return clusters
