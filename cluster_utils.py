@@ -26,7 +26,7 @@ MAX_MATCH_SCORE=50.0
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
     if not constant_match is None:
         return constant_match
-
+    if evalue == 0.0: return max_match
     matchScore = 10 * -math.log10(evalue);
     matchScore = int(matchScore +.5) / 10
     return max_match if matchScore > max_match else matchScore
