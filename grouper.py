@@ -1,4 +1,6 @@
+
 # Disjoint set data structure [http://code.activestate.com/recipes/387776/]
+# Author: Michael Droettboom
 
 class Grouper(object):
    """This class provides a lightweight way to group arbitrary objects
@@ -6,8 +8,7 @@ together into disjoint sets when a full-blown graph data structure
 would be overkill.
 
 Objects can be joined using .join(), tested for connectedness
-using .joined(), and all disjoint sets can be retreived using
-.get().
+using .joined(), and all disjoint sets can be retrieved using list(g)
 
 The objects being joined must be hashable.
 

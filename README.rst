@@ -44,10 +44,10 @@ Dependencies:
     cd ../
     ./lp_solvers.py
 
-- compile program ``bk_cliques`` shipped within this package
-::
-  make
-  sudo cp bk_cliques /usr/local/bin
+- compile program ``bk_cliques`` shipped within this package::
+
+    make
+    sudo cp bk_cliques /usr/local/bin
 
 
 Usage
