@@ -208,9 +208,12 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     for c in constraints_x:
         additions = " + ".join("x%d" % (x+1) for x in c)
         lp_handle.write(" %s <= %d\n" % (additions, qa))
-    for c in constraints_y:
-        additions = " + ".join("x%d" % (x+1) for x in c)
-        lp_handle.write(" %s <= %d\n" % (additions, qb))
+
+    # non-self
+    if not (constraints_x is constraints_y):
+        for c in constraints_y:
+            additions = " + ".join("x%d" % (x+1) for x in c)
+            lp_handle.write(" %s <= %d\n" % (additions, qb))
 
     lp_handle.write("Binary\n")
     for i, score in nodes:
@@ -224,17 +227,26 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     return lp_data
 
 
-def solve_lp(clusters, quota, solver="SCIP", verbose=False):
+def solve_lp(clusters, quota, self_match=False, solver="SCIP", verbose=False):
     
     qb, qa = quota # flip it
     nodes, edges_x, edges_y = construct_conflict_graph(clusters)
-    clq_data_x = format_clq(nodes, edges_x, qa)
-    constraints_x = BKSolver(clq_data_x).results
 
-    clq_data_y = format_clq(nodes, edges_y, qb)
-    constraints_y = BKSolver(clq_data_y).results
+    if self_match:
+        clq_data = format_clq(nodes, edges_x+edges_y, qa)
+        constraints = BKSolver(clq_data).results
 
-    lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
+        lp_data = format_lp(nodes, constraints, qa, constraints, qb)
+
+    else:
+        clq_data_x = format_clq(nodes, edges_x, qa)
+        constraints_x = BKSolver(clq_data_x).results
+
+        clq_data_y = format_clq(nodes, edges_y, qb)
+        constraints_y = BKSolver(clq_data_y).results
+
+        lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
+
     if solver=="SCIP":
         filtered_list = SCIPSolver(lp_data, verbose=verbose).results
         if not filtered_list:
@@ -275,6 +287,10 @@ if __name__ == '__main__':
                     "put in the format like (#subgenomes expected for genome X):"\
                     "(#subgenomes expected for genome Y) "\
                     "[default: %default]")
+    parser.add_option("-f", "--self_match", dest="self_match",
+            action="store_true", default=False,
+            help="you might turn this on when you use this to screen paralogous blocks, "\
+                    "if you have already reduced mirrored blocks into non-redundant set")
     parser.add_option("-s", "--solver", dest="solver",
             type="string", default="SCIP",
             help="use MIP solver, only SCIP or GLPK are currently implemented "\
@@ -301,8 +317,11 @@ if __name__ == '__main__':
         print >>sys.stderr, "quota string should be the form x:x (like 2:4, 1:3, etc.)"
         sys.exit(1)
 
-    assert qa <= 12 and qb <= 12, \
-            "quota %s set too loose, make quota less than 12 each" % options.quota
+    if options.self_match and qa!=qb:
+        raise Exception, "when comparing genome to itself, quota must be the same number (like 1:1, 2:2) "\
+            "you have %s" % options.quota
+    if qa > 12 or qb > 12:
+        raise Exception, "quota %s set too loose, make quota less than 12 each" % options.quota
     quota = (qa, qb) 
 
     clusters = read_clusters(cluster_file)
@@ -320,8 +339,8 @@ if __name__ == '__main__':
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
 
-    clusters = solve_lp(clusters, quota, solver=options.solver,
-                        verbose=options.verbose)
+    clusters = solve_lp(clusters, quota, self_match=options.self_match, 
+                    solver=options.solver, verbose=options.verbose)
 
     filtered_cluster_file = cluster_file + ".filtered"
     fw = file(filtered_cluster_file, "w")
