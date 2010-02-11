@@ -19,6 +19,7 @@ import math
 import sys
 from optparse import OptionParser
 
+
 # copied from brentp's dag_chainer.py
 CONSTANT_MATCH_SCORE=None
 MAX_MATCH_SCORE=50.0
@@ -82,6 +83,62 @@ def write_clusters(filehandle, clusters):
     print >>sys.stderr, "wrote clusters to %s" % filehandle.name
 
 
+def make_range(clusters):
+    # convert to interval ends from a list of anchors
+    eclusters = [] 
+    for cluster in clusters:
+        xlist, ylist, scores = zip(*cluster)
+        score = sum(scores)
+
+        xchr, xmin = min(xlist) 
+        xchr, xmax = max(xlist)
+        ychr, ymin = min(ylist) 
+        ychr, ymax = max(ylist)
+
+        eclusters.append(((xchr, xmin, xmax), (ychr, ymin, ymax), score))
+
+    return eclusters
+
+
+def interval_union(intervals):
+    # return total size of intervals, expect interval as (chr, left, right)
+    intervals.sort()
+
+    total_len = 0
+    cur_chr, cur_left, cur_right = intervals[0] # left-most interval
+    for interval in intervals:
+        # open a new interval if left > cur_right or chr != cur_chr
+        if interval[1] > cur_right or interval[0] != cur_chr:
+            total_len += cur_right - cur_left + 1
+            cur_chr, cur_left, cur_right = interval
+        else:
+            # update cur_right
+            cur_right = max(interval[2], cur_right)
+
+    # the last one
+    total_len += cur_right - cur_left + 1
+
+    return total_len
+
+
+def calc_coverage(clusters, self=False):
+    # calculates the length that's covered, for coverage statistics
+    eclusters = make_range(clusters)
+
+    intervals_x = [x[0] for x in eclusters]
+    intervals_y = [x[1] for x in eclusters]
+    
+    if self:
+        total_len_x = interval_union(intervals_x+intervals_y)
+        total_len_y = total_len_x
+    else:
+        total_len_x = interval_union(intervals_x)
+        total_len_y = interval_union(intervals_y)
+
+    return total_len_x, total_len_y
+
+
+
 if __name__ == '__main__':
 
     usage = "Convert between .cluster (or .dag to .cluster) \n" \
@@ -95,6 +152,10 @@ if __name__ == '__main__':
             action="store", type="int", default=1,
             help="convert scores into int(score*precision) " \
                 "since MIP algorithm only deals with integer weights "\
+                "[default: %default]")
+    parser.add_option("-c", "--calc_coverage", dest="calc_coverage",
+            action="store_true", default=False,
+            help="calculate the total length these clusters occupy "\
                 "[default: %default]")
 
     (options, args) = parser.parse_args()
@@ -112,4 +173,9 @@ if __name__ == '__main__':
     # file format conversion
     clusters = read_clusters(dag_file, options.precision, options.dag_fmt)
     write_clusters(fw, clusters)
+
+    if options.calc_coverage:
+        total_len_x, total_len_y = calc_coverage(clusters)
+        print >>sys.stderr, "Total length on x-axis:", total_len_x 
+        print >>sys.stderr, "Total length on y-axis:", total_len_y
 

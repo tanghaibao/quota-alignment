@@ -15,7 +15,8 @@ import cStringIO
 from optparse import OptionParser
 
 from grouper import Grouper
-from cluster_utils import read_clusters, write_clusters
+from cluster_utils import read_clusters, write_clusters, \
+        make_range, calc_coverage
 from clq_solvers import BKSolver
 from lp_solvers import GLPKSolver, SCIPSolver
 
@@ -64,23 +65,6 @@ def box_relaxed_overlap(boxa, boxb):
 
     return range_relaxed_overlap(boxa_xrange, boxb_xrange) or \
            range_relaxed_overlap(boxa_yrange, boxb_yrange)
-
-
-def make_range(clusters):
-    # convert to interval ends from a list of anchors
-    eclusters = [] 
-    for cluster in clusters:
-        xlist, ylist, scores = zip(*cluster)
-        score = sum(scores)
-
-        xchr, xmin = min(xlist) 
-        xchr, xmax = max(xlist)
-        ychr, ymin = min(ylist) 
-        ychr, ymax = max(ylist)
-
-        eclusters.append(((xchr, xmin, xmax), (ychr, ymin, ymax), score))
-
-    return eclusters
 
 
 #___merge clusters to combine inverted blocks (optional)___________________________
@@ -328,6 +312,8 @@ if __name__ == '__main__':
     for cluster in clusters:
         assert len(cluster) > 0
 
+    total_len_x, total_len_y = calc_coverage(clusters, options.self_match)
+
     Nmax = options.Nmax
 
     if options.merge: 
@@ -345,5 +331,15 @@ if __name__ == '__main__':
     filtered_cluster_file = cluster_file + ".filtered"
     fw = file(filtered_cluster_file, "w")
     write_clusters(fw, sorted(clusters))
+
+    filtered_len_x, filtered_len_y = calc_coverage(clusters, options.self_match)
+    if options.self_match:
+        print >>sys.stderr, "Coverage: %.1f%% (self-match)" % \
+                (filtered_len_x*100./total_len_x)
+    else:
+        print >>sys.stderr, "Genome x coverage: %.1f%%" % \
+                (filtered_len_x*100./total_len_x)
+        print >>sys.stderr, "Genome y coverage: %.1f%%" % \
+                (filtered_len_y*100./total_len_y)
 
 

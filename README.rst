@@ -1,6 +1,8 @@
 Quota synteny alignment
 =========================
 
+.. contents ::
+
 Introduction
 ------------
 
