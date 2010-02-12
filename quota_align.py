@@ -341,5 +341,7 @@ if __name__ == '__main__':
                 (filtered_len_x*100./total_len_x)
         print >>sys.stderr, "Genome y coverage: %.1f%%" % \
                 (filtered_len_y*100./total_len_y)
+    print >>sys.stderr, "`coverage` is the percentage covered of input data"\
+            " (not whole genome)"
 
 

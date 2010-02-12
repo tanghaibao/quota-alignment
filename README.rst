@@ -6,6 +6,10 @@ Quota synteny alignment
 Introduction
 ------------
 
+Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use ad-hoc rules to screen these blocks. 
+
+This program tries to screen the clusters based on the coverage constraints imposed by the user. For example, between rice-sorghum comparison, we can enforce 1:1 ratio to get all the orthologous blocks; or maybe 4:2 to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
+
 Installation
 ------------
 
@@ -17,7 +21,7 @@ Dependencies:
 
 - python version >=2.6
 
-- GNU linear programming kit GLPK [http://www.gnu.org/software/glpk/]::
+- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_::
 
     cd quota-alignment/
     make
@@ -32,7 +36,7 @@ Dependencies:
     cd ../../
 
 
-- (*optional*) SCIP mixed integer programming solver linked with CLP [http://scip.zib.de/download.shtml], choose the binary that fits your machine::
+- (*optional*) SCIP mixed integer programming solver linked with `CLP <http://scip.zib.de/download.shtml>`_, choose the binary that fits your machine::
 
     unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
     ./scip-1.2.0.linux.x86_64.gnu.opt.clp

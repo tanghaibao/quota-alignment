@@ -5,4 +5,4 @@
 !*.rst
 !makefile
 !.gitignore
-!brachy_sorghum.cluster
+!maize_sorghum.cluster
