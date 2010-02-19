@@ -86,7 +86,7 @@ class GLPKSolver(AbstractMIPSolver):
             print >>sys.stderr, "\nError:"
             print >>sys.stderr, "You need to install program `glpsol' on your path"
             print >>sys.stderr, "[http://www.gnu.org/software/glpk/]"
-            sys.exit(1)
+            return -1, None
 
         return retcode, listfile
 
@@ -118,13 +118,14 @@ class SCIPSolver(AbstractMIPSolver):
         cmd = "scip -f %s -l %s"
         if not verbose:
             cmd += " >/dev/null"
+
         retcode = call(cmd % (lpfile, outfile), shell=True)
 
         if retcode==127:
             print >>sys.stderr, "\nError:"
             print >>sys.stderr, "You need to install program `scip' on your path"
             print >>sys.stderr, "[http://scip.zib.de/]"
-            sys.exit(1)
+            return -1, None
 
         return retcode, outfile
 

@@ -9,6 +9,7 @@ this python program can do two things:
 
 """
 
+import os
 import sys
 import pprint
 import cStringIO
@@ -211,37 +212,37 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     return lp_data
 
 
-def solve_lp(clusters, quota, self_match=False, solver="SCIP", verbose=False):
+def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", verbose=False):
     
     qb, qa = quota # flip it
     nodes, edges_x, edges_y = construct_conflict_graph(clusters)
 
     if self_match:
         clq_data = format_clq(nodes, edges_x+edges_y, qa)
-        constraints = BKSolver(clq_data).results
+        constraints = BKSolver(clq_data, work_dir=work_dir).results
 
         lp_data = format_lp(nodes, constraints, qa, constraints, qb)
 
     else:
         clq_data_x = format_clq(nodes, edges_x, qa)
-        constraints_x = BKSolver(clq_data_x).results
+        constraints_x = BKSolver(clq_data_x, work_dir=work_dir).results
 
         clq_data_y = format_clq(nodes, edges_y, qb)
-        constraints_y = BKSolver(clq_data_y).results
+        constraints_y = BKSolver(clq_data_y, work_dir=work_dir).results
 
         lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
 
     if solver=="SCIP":
-        filtered_list = SCIPSolver(lp_data, verbose=verbose).results
+        filtered_list = SCIPSolver(lp_data, work_dir=work_dir, verbose=verbose).results
         if not filtered_list:
             print >>sys.stderr, "SCIP fails... trying GLPK"
-            filtered_list = GLPKSolver(lp_data, verbose=verbose).results
+            filtered_list = GLPKSolver(lp_data, work_dir=work_dir, verbose=verbose).results
             
     elif solver=="GLPK":
-        filtered_list = GLPKSolver(lp_data, verbose=verbose).results
+        filtered_list = GLPKSolver(lp_data, work_dir=work_dir, verbose=verbose).results
         if not filtered_list:
             print >>sys.stderr, "GLPK fails... trying SCIP"
-            filtered_list = SCIPSolver(lp_data).results
+            filtered_list = SCIPSolver(lp_data, work_dir=work_dir, verbose=verbose).results
     
     # non-overlapping set on both axis
     filtered_clusters = [clusters[x] for x in filtered_list]
@@ -262,7 +263,7 @@ if __name__ == '__main__':
                     "merged clusters are stored in cluster_file.merged "\
                     "[default: %default]")
     parser.add_option("-n", "--Nmax", dest="Nmax", 
-            type="int", default=20,
+            type="int", default=40,
             help="distance cutoff to determine whether two blocks are overlapping "\
                     "[default: %default genes] ")
     parser.add_option("-q", "--quota", dest="quota", 
@@ -324,8 +325,12 @@ if __name__ == '__main__':
         fw = file(merged_cluster_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
+        sys.exit(0)
 
-    clusters = solve_lp(clusters, quota, self_match=options.self_match, 
+    op = os.path
+    work_dir = op.join(op.dirname(op.abspath(cluster_file)), "work")
+    print >>sys.stderr, "writng intermediate files to", work_dir
+    clusters = solve_lp(clusters, quota, work_dir=work_dir, self_match=options.self_match, 
                     solver=options.solver, verbose=options.verbose)
 
     filtered_cluster_file = cluster_file + ".filtered"

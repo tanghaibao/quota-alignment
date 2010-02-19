@@ -35,6 +35,9 @@ class AbstractCLQSolver(object):
     def __init__(self, clq_data,
                  work_dir=op.join(op.dirname(__file__),"work")):
 
+        if not os.path.isdir(work_dir):
+            os.mkdir(work_dir)
+
         clqfile = work_dir + "/data.clq" # problem instance
         print >>sys.stderr, "Write problem spec to ", clqfile
 
