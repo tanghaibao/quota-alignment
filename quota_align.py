@@ -30,8 +30,8 @@ def range_mergeable(a, b):
     if a_chr!=b_chr: return False 
     
     # make sure it is end-to-end merge, and within distance cutoff
-    return (a_min <= b_max + Nmax) and \
-           (b_min <= a_max + Nmax)
+    return (a_min <= b_max + Kmax) and \
+           (b_min <= a_max + Kmax)
 
 
 def box_mergeable(boxa, boxb):
@@ -50,13 +50,12 @@ def range_relaxed_overlap(a, b):
     # must be on the same chromosome
     if a_chr!=b_chr: return False 
     
-    # Kmax is the allowable overlap level, it is usually Nmax
-    # however some very small segments might slip through
+    # some very small segments might slip through
     # therefore we also control for the segment size
-    Kmax = min(a_max-a_min, b_max-b_min, Nmax)
+    Mmax = min(a_max-a_min, b_max-b_min, Nmax)
     # to handle ranges that slightly overlap
-    return (a_min <= b_max - Kmax) and \
-           (b_min <= a_max - Kmax)
+    return (a_min <= b_max - Mmax) and \
+           (b_min <= a_max - Mmax)
 
 
 def box_relaxed_overlap(boxa, boxb):
@@ -258,20 +257,27 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
 
     parser.add_option("-m", "--merge", dest="merge",
-            action="store_true", default=False,
-            help="merge blocks first that are explained by local inversions, "\
-                    "merged clusters are stored in cluster_file.merged "\
+            action="store_true", default=True,
+            help="`block merging` procedure -- merge blocks that are close to "\
+                    "each other, merged clusters are stored in cluster_file.merged "\
                     "[default: %default]")
-    parser.add_option("-n", "--Nmax", dest="Nmax", 
-            type="int", default=40,
-            help="distance cutoff to determine whether two blocks are overlapping "\
+    parser.add_option("-k", "--Kmax", dest="Kmax", 
+            type="int", default=0,
+            help="merge blocks that are close to each other within distance cutoff"\
+                    "(cutoff for `block merging`) "\
                     "[default: %default genes] ")
     parser.add_option("-q", "--quota", dest="quota", 
             type="string", default="1:1",
-            help="screen blocks to constrain mapping (useful for orthology), "\
+            help="`quota mapping` procedure -- screen blocks to constrain mapping"\
+                    " (useful for orthology), "\
                     "put in the format like (#subgenomes expected for genome X):"\
                     "(#subgenomes expected for genome Y) "\
                     "[default: %default]")
+    parser.add_option("-n", "--Nmax", dest="Nmax", 
+            type="int", default=40,
+            help="distance cutoff to tolerate two blocks that are "\
+                    "slightly overlapping (cutoff for `quota mapping`) "\
+                    "[default: %default genes] ")
     parser.add_option("-f", "--self_match", dest="self_match",
             action="store_true", default=False,
             help="you might turn this on when you use this to screen paralogous blocks, "\
@@ -315,8 +321,10 @@ if __name__ == '__main__':
 
     total_len_x, total_len_y = calc_coverage(clusters, options.self_match)
 
+    Kmax = options.Kmax
     Nmax = options.Nmax
 
+    # below runs `block merging`
     if options.merge: 
         chain = range(len(clusters))
         chain, clusters = recursive_merge_clusters(chain, clusters)
@@ -325,13 +333,17 @@ if __name__ == '__main__':
         fw = file(merged_cluster_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
+
+    # below runs `quota mapping`
+    if "-q" not in sys.argv and "--quota" not in sys.argv:
         sys.exit(0)
 
     op = os.path
     work_dir = op.join(op.dirname(op.abspath(cluster_file)), "work")
     print >>sys.stderr, "writng intermediate files to", work_dir
-    clusters = solve_lp(clusters, quota, work_dir=work_dir, self_match=options.self_match, 
-                    solver=options.solver, verbose=options.verbose)
+    clusters = solve_lp(clusters, quota, work_dir=work_dir, \
+            self_match=options.self_match, \
+            solver=options.solver, verbose=options.verbose)
 
     filtered_cluster_file = cluster_file + ".filtered"
     fw = file(filtered_cluster_file, "w")
