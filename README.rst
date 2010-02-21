@@ -15,7 +15,7 @@ Installation
 
 - Download the most recent codes at::
 
-    git clone git@github.com:tanghaibao/quota-alignment.git
+    git clone http://github.com/tanghaibao/quota-alignment.git 
 
 Dependencies:
 
@@ -33,7 +33,7 @@ Dependencies:
     ./configure
     make
     sudo make install
-    cd ../../
+    glpsol
 
 
 - (*optional*) SCIP mixed integer programming solver linked with `CLP <http://scip.zib.de/download.shtml>`_, choose the binary that fits your machine::
@@ -44,9 +44,9 @@ Dependencies:
     sudo ldconfig
     ./scip-1.2.0.linux.x86_64.gnu.opt.clp
     sudo ln -s /usr/lib/liblapack.so{,.3}
-    sudo cp scip-1.2.0.linux.x86_64.gnu.opt.clp /usr/local/bin/
-    scip
+    sudo cp scip-1.2.0.linux.x86_64.gnu.opt.clp /usr/local/bin/scip
     sudo chmod +x !$
+    scip
     cd ../
     ./lp_solvers.py
 
@@ -58,18 +58,25 @@ Dependencies:
 
 Usage
 -----
-- Look at a sample input (``.dag`` or ``.cluster`` file), and change your file accordingly. Mostly I recommend the cluster file, with the following format::
+- Look at a sample input (``.dag`` or ``.cluster`` file), and change your file accordingly. Mostly I recommend the ``.cluster`` format::
 
     # cluster1
     chr1 pos1 chr2 pos2 score
     ...
     # cluster2
 
+The utility script ``cluster_utils.py`` can be used for converting the Freeling lab ``.dag`` format to the ``.cluster`` format, it can also print out the block sequences for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
+
 - Run ``quota_align.py`` and read the possible options.
 
 also see ``run.sh`` for usage.
 
 
+Cookbook
+--------
+To be written.
+
+
 Reference
 ---------
-Tang et al. Guided synteny alignment between duplicated genomes. (in preparation)
+Tang et al. Guided synteny alignment between duplicated genomes.

@@ -17,6 +17,7 @@ a plain cluster file looks like:
 
 import math
 import sys
+from itertools import groupby
 from optparse import OptionParser
 
 
@@ -100,6 +101,55 @@ def make_range(clusters):
     return eclusters
 
 
+def make_projection(clusters):
+    # let the x-projection of the blocks 1..n
+    # output the y-projection sequence for downstream permutation analysis
+    # both lists are 2-level as we have integer sequences for multiple chromosomes
+    
+    clusters.sort()
+    x_projection, y_projection = [], []
+
+    for i, cluster in enumerate(clusters):
+        block_id = i+1
+        cluster.sort()
+        xlist, ylist, scores = zip(*cluster)
+
+        xchr, xfirst = xlist[0]
+        x_projection.append((xchr, xfirst, block_id))
+
+        ychr, yfirst = ylist[0]
+        ychr, ylast = ylist[-1]
+        if yfirst < ylast: 
+            sign = 1
+        else:
+            yfirst, ylast = ylast, yfirst
+            sign = -1
+        y_projection.append((ychr, yfirst, sign * block_id))
+
+    y_projection.sort()
+
+    return x_projection, y_projection 
+
+
+def print_intseq(projection, filehandle):
+    # from a list of (chr, pos, signed_id) => a nested list of multichromosome
+    # signed integers
+    g = groupby(projection, lambda x: x[0])
+    intseq = [list(x[2] for x in blocks) for chr, blocks in g]
+    for s in intseq:
+        print >>filehandle, " ".join(str(x) for x in s) + "$"
+
+
+def print_grimm(clusters, filehandle=sys.stdout):
+    # GRIMM-style output, for more info, see http://nbcr.sdsc.edu/GRIMM/grimm.cgi
+    x_projection, y_projection = make_projection(clusters)
+
+    print >>filehandle, ">genome x"
+    print_intseq(x_projection, filehandle)
+    print >>filehandle, ">genome y"
+    print_intseq(y_projection, filehandle)
+
+
 def interval_union(intervals):
     # return total size of intervals, expect interval as (chr, left, right)
     intervals.sort()
@@ -142,7 +192,8 @@ def calc_coverage(clusters, self=False):
 if __name__ == '__main__':
 
     usage = "Convert between .cluster (or .dag to .cluster) \n" \
-            "%prog [options] input output "
+            "%prog [options] input output \n" \
+            ".. if output not given, will write to stdout"
     parser = OptionParser(usage)
 
     parser.add_option("-d", "--dag", dest="dag_fmt",
@@ -157,6 +208,10 @@ if __name__ == '__main__':
             action="store_true", default=False,
             help="calculate the total length these clusters occupy "\
                 "[default: %default]")
+    parser.add_option("-r", "--print_grimm", dest="print_grimm",
+            action="store_true", default=False,
+            help="print two integer sequences for permutation GRIMM analysis "\
+                 "[default: %default]")
 
     (options, args) = parser.parse_args()
 
@@ -172,6 +227,11 @@ if __name__ == '__main__':
 
     # file format conversion
     clusters = read_clusters(dag_file, options.precision, options.dag_fmt)
+
+    if options.print_grimm:
+        print_grimm(clusters)
+        sys.exit(0)
+
     write_clusters(fw, clusters)
 
     if options.calc_coverage:

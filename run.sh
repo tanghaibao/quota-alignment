@@ -3,6 +3,7 @@
 # test case 1
 #cluster_utils.py --dag athaliana_alyrata.dag athaliana_alyrata.cluster 
 #quota_align.py --quota 1:1 athaliana_alyrata.cluster
+#cluster_utils.py --print_grimm athaliana_alyrata.cluster.filtered 
 
 # test case 2
 #cluster_utils.py --precision 1000 grape_grape grape_grape.cluster
