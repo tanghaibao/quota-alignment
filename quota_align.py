@@ -101,7 +101,8 @@ def merge_clusters(chain, clusters):
     # refresh clusters list, merge chains
     for k, v in to_merge.iteritems():
         if to_merge[k]!=k: # i.e. not map to self
-            clusters[v].extend(clusters[k])
+            #clusters[v].extend(clusters[k])
+            clusters[v] = list(set(clusters[v])|set(clusters[k]))
 
     # maintain the x-sort
     [cluster.sort() for cluster in clusters]

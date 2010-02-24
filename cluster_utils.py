@@ -104,7 +104,7 @@ def make_range(clusters):
 def make_projection(clusters):
     # let the x-projection of the blocks 1..n
     # output the y-projection sequence for downstream permutation analysis
-    # both lists are 2-level as we have integer sequences for multiple chromosomes
+    # both lists are nested one level as we have integer sequences for multiple chromosomes
     
     clusters.sort()
     x_projection, y_projection = [], []
@@ -134,10 +134,12 @@ def make_projection(clusters):
 def print_intseq(projection, filehandle):
     # from a list of (chr, pos, signed_id) => a nested list of multichromosome
     # signed integers
+    #print projection
     g = groupby(projection, lambda x: x[0])
-    intseq = [list(x[2] for x in blocks) for chr, blocks in g]
+    chr_list, intseq = zip(*[(chr, list(x[2] for x in blocks)) for chr, blocks in g])
     for s in intseq:
         print >>filehandle, " ".join(str(x) for x in s) + "$"
+    return chr_list
 
 
 def print_grimm(clusters, filehandle=sys.stdout):
@@ -145,9 +147,11 @@ def print_grimm(clusters, filehandle=sys.stdout):
     x_projection, y_projection = make_projection(clusters)
 
     print >>filehandle, ">genome x"
-    print_intseq(x_projection, filehandle)
+    chr_list = print_intseq(x_projection, filehandle)
+    print >>sys.stderr, ",".join(chr_list)
     print >>filehandle, ">genome y"
-    print_intseq(y_projection, filehandle)
+    chr_list = print_intseq(y_projection, filehandle)
+    print >>sys.stderr, ",".join(chr_list)
 
 
 def interval_union(intervals):
