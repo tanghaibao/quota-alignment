@@ -340,7 +340,7 @@ if __name__ == '__main__':
 
     op = os.path
     work_dir = op.join(op.dirname(op.abspath(cluster_file)), "work")
-    print >>sys.stderr, "write intermediate files to", work_dir
+    print >>sys.stderr, "write intermediate files to '%s'" % work_dir
     clusters = solve_lp(clusters, quota, work_dir=work_dir, \
             self_match=options.self_match, \
             solver=options.solver, verbose=options.verbose)

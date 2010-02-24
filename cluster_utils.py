@@ -66,7 +66,7 @@ def read_clusters(filename, precision=1, dag_fmt=False):
         if len(cluster) == 0: continue
         clusters.append(cluster)
 
-    print >>sys.stderr, "total (%d) clusters in %s file" % \
+    print >>sys.stderr, "total (%d) clusters in '%s'" % \
             (len(clusters), filename)
 
     return clusters
@@ -81,7 +81,7 @@ def write_clusters(filehandle, clusters):
             filehandle.write("%s\t%d\t" % gene1 )
             filehandle.write("%s\t%d\t" % gene2 )
             filehandle.write("%d\n" % score )
-    print >>sys.stderr, "write (%s) clusters to %s" % \
+    print >>sys.stderr, "write (%s) clusters to '%s'" % \
             (len(clusters), filehandle.name)
 
 

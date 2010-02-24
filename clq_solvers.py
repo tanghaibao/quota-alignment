@@ -39,7 +39,7 @@ class AbstractCLQSolver(object):
             os.mkdir(work_dir)
 
         clqfile = work_dir + "/data.clq" # problem instance
-        print >>sys.stderr, "write problem spec to ", clqfile
+        print >>sys.stderr, "write problem spec to '%s'" % clqfile
 
         fw = file(clqfile, "w")
         fw.write(clq_data)
