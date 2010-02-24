@@ -41,10 +41,7 @@ def read_clusters(filename, precision=1, dag_fmt=False):
     # clusters contain only bounds, point_clusters contain all points
     clusters = [] 
     
-    total_lines = sum(1 for row in fp)
     fmt = "dag" if dag_fmt else "cluster"
-    print >>sys.stderr, "total lines in %s file (%d)" % (fmt, total_lines)
-    fp.seek(0)
     row = fp.readline()
     j = 1
     while row:
@@ -69,6 +66,9 @@ def read_clusters(filename, precision=1, dag_fmt=False):
         if len(cluster) == 0: continue
         clusters.append(cluster)
 
+    print >>sys.stderr, "total (%d) clusters in %s file" % \
+            (len(clusters), filename)
+
     return clusters
 
 
@@ -81,7 +81,8 @@ def write_clusters(filehandle, clusters):
             filehandle.write("%s\t%d\t" % gene1 )
             filehandle.write("%s\t%d\t" % gene2 )
             filehandle.write("%d\n" % score )
-    print >>sys.stderr, "wrote clusters to %s" % filehandle.name
+    print >>sys.stderr, "write (%s) clusters to %s" % \
+            (len(clusters), filehandle.name)
 
 
 def make_range(clusters):

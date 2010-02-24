@@ -67,7 +67,7 @@ void read_graph()
 
     /* first row contains N (number of nodes) and K (minimum size clique to report) */
     scanf("%d%d", &num_nodes, &K);
-    fprintf(stderr, "Number of nodes in the graph: %d\n", num_nodes);
+    fprintf(stderr, "number of nodes in the graph: %d\n", num_nodes);
 
     init_memory();
 

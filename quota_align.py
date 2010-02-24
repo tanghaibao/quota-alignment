@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-this python program can do two things:
+this python program does the following
 1. merge dags by recursively merging dag bounds
 2. build conflict graph where edges represent 1d-`overlap' between blocks
 3. feed the data into the linear programming solver.
@@ -101,7 +101,6 @@ def merge_clusters(chain, clusters):
     # refresh clusters list, merge chains
     for k, v in to_merge.iteritems():
         if to_merge[k]!=k: # i.e. not map to self
-            #clusters[v].extend(clusters[k])
             clusters[v] = list(set(clusters[v])|set(clusters[k]))
 
     # maintain the x-sort
@@ -258,7 +257,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
 
     parser.add_option("-m", "--merge", dest="merge",
-            action="store_true", default=True,
+            action="store_true", default=False,
             help="`block merging` procedure -- merge blocks that are close to "\
                     "each other, merged clusters are stored in cluster_file.merged "\
                     "[default: %default]")
@@ -341,7 +340,7 @@ if __name__ == '__main__':
 
     op = os.path
     work_dir = op.join(op.dirname(op.abspath(cluster_file)), "work")
-    print >>sys.stderr, "writng intermediate files to", work_dir
+    print >>sys.stderr, "write intermediate files to", work_dir
     clusters = solve_lp(clusters, quota, work_dir=work_dir, \
             self_match=options.self_match, \
             solver=options.solver, verbose=options.verbose)
@@ -352,14 +351,12 @@ if __name__ == '__main__':
 
     filtered_len_x, filtered_len_y = calc_coverage(clusters, options.self_match)
     if options.self_match:
-        print >>sys.stderr, "Coverage: %.1f%% (self-match)" % \
+        print >>sys.stderr, "coverage: %.1f%% (self-match)" % \
                 (filtered_len_x*100./total_len_x)
     else:
-        print >>sys.stderr, "Genome x coverage: %.1f%%" % \
+        print >>sys.stderr, "genome x coverage: %.1f%%" % \
                 (filtered_len_x*100./total_len_x)
-        print >>sys.stderr, "Genome y coverage: %.1f%%" % \
+        print >>sys.stderr, "genome y coverage: %.1f%%" % \
                 (filtered_len_y*100./total_len_y)
-    print >>sys.stderr, "`coverage` is the percentage covered of input data"\
-            " (not whole genome)"
 
 
