@@ -5,4 +5,5 @@
 !*.rst
 !makefile
 !.gitignore
-!maize_sorghum.cluster
+!data/*.cluster
+!doc/*
