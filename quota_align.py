@@ -15,32 +15,11 @@ import pprint
 import cStringIO
 from optparse import OptionParser
 
-from grouper import Grouper
 from cluster_utils import read_clusters, write_clusters, \
         make_range, calc_coverage
+from box_utils import get_2doverlap
 from clq_solvers import BKSolver
 from lp_solvers import GLPKSolver, SCIPSolver
-
-
-def range_mergeable(a, b):
-    # 1-d version of box_mergeable
-    a_chr, a_min, a_max = a
-    b_chr, b_min, b_max = b
-    # must be on the same chromosome
-    if a_chr!=b_chr: return False 
-    
-    # make sure it is end-to-end merge, and within distance cutoff
-    return (a_min <= b_max + Kmax) and \
-           (b_min <= a_max + Kmax)
-
-
-def box_mergeable(boxa, boxb):
-
-    boxa_xrange, boxa_yrange, _ = boxa
-    boxb_xrange, boxb_yrange, _ = boxb
-
-    return range_mergeable(boxa_xrange, boxb_xrange) and \
-           range_mergeable(boxa_yrange, boxb_yrange)
 
 
 def range_relaxed_overlap(a, b):
@@ -78,15 +57,7 @@ def merge_clusters(chain, clusters):
     eclusters = make_range(clusters)
     #pprint.pprint(eclusters)
 
-    mergeables = Grouper() # disjoint sets of clusters that can be merged
-    # check all pairwise combinations
-    for i in xrange(chain_num):
-        ci = chain[i]
-        mergeables.join(ci)
-        for j in xrange(i+1, chain_num):
-            cj = chain[j]
-            if box_mergeable(eclusters[ci], eclusters[cj]):
-                mergeables.join(ci, cj)
+    mergeables = get_2doverlap(chain, eclusters, Kmax)
 
     to_merge = {} 
     for mergeable in mergeables:
