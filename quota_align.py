@@ -65,10 +65,11 @@ def recursive_merge_clusters(chain, clusters):
 
 #___populate conflict graph before sending into MIP solver__________________________
 
-def construct_conflict_graph(clusters):
+def construct_conflict_graph(clusters, quota=(1,1)):
 
     # check pairwise cluster comparison, if they overlap then mark edge as `conflict'
 
+    qa, qb = quota
     eclusters = make_range(clusters, extend=-Nmax)
     # (1-based index, cluster score)
     nodes = [(i+1, c[-1]) for i, c in enumerate(eclusters)]
@@ -76,8 +77,8 @@ def construct_conflict_graph(clusters):
     eclusters_x, eclusters_y, scores = zip(*eclusters)
 
     # represents the contraints over x-axis and y-axis
-    constraints_x = get_1D_overlap(eclusters_x)
-    constraints_y = get_1D_overlap(eclusters_y)
+    constraints_x = get_1D_overlap(eclusters_x, qa)
+    constraints_y = get_1D_overlap(eclusters_y, qb)
 
     return nodes, constraints_x, constraints_y 
 
@@ -103,16 +104,21 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
         lp_handle.write("+ %d x%d " % (score, i))
     lp_handle.write("\n")
     
+    num_of_constraints = 0
     lp_handle.write("Subject To\n")
     for c in constraints_x:
         additions = " + ".join("x%d" % (x+1) for x in c)
         lp_handle.write(" %s <= %d\n" % (additions, qa))
+    num_of_constraints += len(constraints_x)
 
     # non-self
     if not (constraints_x is constraints_y):
         for c in constraints_y:
             additions = " + ".join("x%d" % (x+1) for x in c)
             lp_handle.write(" %s <= %d\n" % (additions, qb))
+        num_of_constraints += len(constraints_y)
+    print >>sys.stderr, "number of binary variables (%d), number of constraints (%d)" % \
+            (len(nodes), num_of_constraints)
 
     lp_handle.write("Binary\n")
     for i, score in nodes:
@@ -129,11 +135,10 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
 def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", verbose=False):
     
     qb, qa = quota # flip it
-    nodes, constraints_x, constraints_y = construct_conflict_graph(clusters)
+    nodes, constraints_x, constraints_y = construct_conflict_graph(clusters, (qa, qb))
 
     if self_match:
-        constraints = constraints_x | constraints_y
-        constraints_x = constraints_y = constraints
+        constraints_x = constraints_y = constraints_x | constraints_y
 
     lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
 

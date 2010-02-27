@@ -3,7 +3,7 @@
 
 """
 This script implements algorithm for finding intersecting rectangles, both on the 2D dotplot,
-and on the projection onto 1D-axis; as used by quota_align.py
+and on the projection onto 1D-axis; as both routines are used by quota_align.py
 
 """
 
@@ -94,6 +94,7 @@ def get_2D_overlap(chain, eclusters):
         chr_last = chr
 
     return mergeables
+
 
 if __name__ == '__main__':
     
