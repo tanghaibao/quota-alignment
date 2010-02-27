@@ -71,6 +71,8 @@ def read_clusters(filename, precision=1, dag_fmt=False):
     print >>sys.stderr, "read (%d) clusters in '%s'" % \
             (len(clusters), filename)
 
+    clusters.sort()
+
     return clusters
 
 
