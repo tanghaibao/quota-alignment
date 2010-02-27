@@ -3,7 +3,7 @@
 # test case 1
 #cluster_utils.py --dag data/athaliana_alyrata.dag data/athaliana_alyrata.qa
 quota_align.py --merge --quota 1:1 data/athaliana_alyrata.qa
-diff data/athaliana_alyrata.qa.merged scratch/athaliana_alyrata.cluster.merged
+#diff data/athaliana_alyrata.qa.merged scratch/athaliana_alyrata.cluster.merged
 #cluster_utils.py --print_grimm data/athaliana_alyrata.qa.filtered 
 
 # test case 2

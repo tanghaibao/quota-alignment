@@ -21,7 +21,7 @@ Installation
 
 Dependencies:
 
-- python version >=2.6
+- Python version >=2.6
 
 - GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_::
 
@@ -31,7 +31,8 @@ Dependencies:
     ./configure
     make
     sudo make install
-    glpsol
+
+``glpsol`` executable must be found in the user's path.
 
 
 - (*optional*) SCIP mixed integer programming solver linked with `CLP <http://scip.zib.de/download.shtml>`_, choose the binary that fits your machine, note that in order to run SCIP, LAPACK needs to be installed too::
@@ -43,7 +44,8 @@ Dependencies:
     sudo ln -s /usr/lib/liblapack.so{,.3}
     sudo cp scip-1.2.0.linux.x86_64.gnu.opt.clp /usr/local/bin/scip
     sudo chmod +x !$
-    scip
+
+``scip`` executable must be found in the user's path.
 
 
 Usage

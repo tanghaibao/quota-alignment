@@ -5,7 +5,7 @@
 this python program does the following
 1. merge dags by recursively merging dag bounds
 2. build conflict graph where edges represent 1d-`overlap' between blocks
-3. feed the data into the linear programming solver.
+3. feed the data into the linear programming solver
 
 """
 
@@ -29,7 +29,7 @@ def merge_clusters(chain, clusters):
     # these need to be removed
 
     chain_num = len(chain)
-    eclusters = make_range(clusters, extend=Kmax)
+    eclusters = make_range(clusters, extend=Dmax)
     #pprint.pprint(eclusters)
 
     mergeables = get_2D_overlap(chain, eclusters)
@@ -46,7 +46,7 @@ def merge_clusters(chain, clusters):
     # maintain the x-sort
     [cluster.sort() for cluster in clusters]
 
-    # nothing is merged
+    # check if anything is merged
     updated = (len(merged_chain) != chain_num)
     return merged_chain, updated
 
@@ -133,9 +133,9 @@ def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", 
 
     if self_match:
         constraints = constraints_x | constraints_y
-        lp_data = format_lp(nodes, constraints, qa, constraints, qb)
-    else:
-        lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
+        constraints_x = constraints_y = constraints
+
+    lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
 
     if solver=="SCIP":
         filtered_list = SCIPSolver(lp_data, work_dir=work_dir, verbose=verbose).results
@@ -170,11 +170,11 @@ if __name__ == '__main__':
             help="`block merging` procedure -- merge blocks that are close to "\
                     "each other, merged clusters are stored in cluster_file.merged "\
                     "[default: %default]")
-    merge_group.add_option("--Km", dest="Kmax", 
+    merge_group.add_option("--Dm", dest="Dmax", 
             type="int", default=0,
             help="merge blocks that are close to each other within distance cutoff"\
                     "(cutoff for `block merging`) "\
-                    "[default: %default genes] ")
+                    "[default: %default units (gene dist or bp dist, depending on the input)] ")
     parser.add_option_group(merge_group)
 
     quota_group = OptionGroup(parser, "Quota mapping function")
@@ -185,7 +185,7 @@ if __name__ == '__main__':
                     "put in the format like (#subgenomes expected for genome X):"\
                     "(#subgenomes expected for genome Y) "\
                     "[default: %default]")
-    quota_group.add_option("--Dm", dest="Nmax", 
+    quota_group.add_option("--Nm", dest="Nmax", 
             type="int", default=40,
             help="distance cutoff to tolerate two blocks that are "\
                     "slightly overlapping (cutoff for `quota mapping`) "\
@@ -237,7 +237,7 @@ if __name__ == '__main__':
 
     total_len_x, total_len_y = calc_coverage(clusters, options.self_match)
 
-    Kmax = options.Kmax
+    Dmax = options.Dmax
     Nmax = options.Nmax
 
     # below runs `block merging`

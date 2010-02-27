@@ -2,29 +2,35 @@
 # -*- coding: UTF-8 -*-
 
 """
-This script implements algorithm for finding intersecting rectangles, both on the 2d dotplot,
-and on the projection onto axis
+This script implements algorithm for finding intersecting rectangles, both on the 2D dotplot,
+and on the projection onto 1D-axis; as used by quota_align.py
 
 """
 
 from grouper import Grouper
 
 def range_overlap(a, b):
-    # 1-d version of box_mergeable
+    """Example:
+    >>> range_overlap(("1", 30, 45), ("1", 45, 55))
+    True
+    >>> range_overlap(("1", 30, 45), ("1", 57, 68))
+    False
+    >>> range_overlap(("1", 30, 45), ("2", 42, 55))
+    False
+
+    """
+
     a_chr, a_min, a_max = a
     b_chr, b_min, b_max = b
     # must be on the same chromosome
     if a_chr!=b_chr: return False 
-    
-    # make sure it is end-to-end merge, and within distance cutoff
-    return (a_min <= b_max) and \
-           (b_min <= a_max)
+    return (a_min <= b_max) and (b_min <= a_max)
 
 
 def get_1D_overlap(eclusters, depth=1):
     """
-    Naive implementation for 1D overlapping
-    returns cliques of ids that are in conflict
+    find blocks that are 1D overlapping,
+    returns cliques of block ids that are in conflict
 
     """
 
@@ -33,7 +39,7 @@ def get_1D_overlap(eclusters, depth=1):
 
     ends = []
     for i, (chr, left, right) in enumerate(eclusters):
-        ends.append((chr, left, 0, i))
+        ends.append((chr, left, 0, i))  # 0/1 for left/right-ness
         ends.append((chr, right, 1, i))
     ends.sort()
 
@@ -53,7 +59,7 @@ def get_1D_overlap(eclusters, depth=1):
 
 def get_2D_overlap(chain, eclusters):
     """
-    Implements a sweep line algorithm when n is large:
+    Implements a sweep line algorithm, that has better running time than naive O(n^2):
     assume block has x_ends, and y_ends for the bounds
 
     1. sort x_ends, and take a sweep line to scan the x_ends
@@ -69,7 +75,7 @@ def get_2D_overlap(chain, eclusters):
     x_ends = []
     for i, (range_x, range_y, score) in enumerate(eclusters):
         chr, left, right = range_x
-        x_ends.append((chr, left, 0, i))
+        x_ends.append((chr, left, 0, i))  # 0/1 for left/right-ness
         x_ends.append((chr, right, 1, i))
     x_ends.sort()
 
@@ -89,6 +95,8 @@ def get_2D_overlap(chain, eclusters):
 
     return mergeables
 
-
 if __name__ == '__main__':
-    pass
+    
+    import doctest
+    doctest.testmod()
+
