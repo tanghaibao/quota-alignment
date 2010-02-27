@@ -48,6 +48,36 @@ def get_1D_overlap(eclusters):
     return overlap_pairs
 
 
+def get_1D_overlap_fast(eclusters, depth=1):
+    """
+    Naive implementation for 1D overlapping
+    returns cliques of ids that are in conflict
+
+    """
+
+    overlap_set = set() 
+    active = set()
+
+    ends = []
+    for i, (chr, left, right) in enumerate(eclusters):
+        ends.append((chr, -left, i))
+        ends.append((chr, right, i))
+    ends.sort(key=lambda x: (x[0], abs(x[1])))
+
+    chr_last = ""
+    for chr, pos, i in ends:
+        if chr != chr_last: active.clear()
+        if pos <= 0: active.add(i) # left end
+        else: active.remove(i)     # right end
+
+        if len(active) > depth:
+            overlap_set.add(tuple(sorted(active)))
+
+        chr_last = chr
+
+    return list(overlap_set)
+
+
 def get_2D_overlap(chain, eclusters):
     """
     Naive implementation for 2d overlapping

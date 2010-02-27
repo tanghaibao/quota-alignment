@@ -17,8 +17,8 @@ import itertools
 
 from cluster_utils import read_clusters, write_clusters, \
         make_range, calc_coverage
-from box_utils import get_1D_overlap, get_2D_overlap, get_2D_overlap_fast
-from clq_solvers import BKSolver
+from box_utils import get_1D_overlap, get_1D_overlap_fast, \
+        get_2D_overlap, get_2D_overlap_fast
 from lp_solvers import GLPKSolver, SCIPSolver
 
 
@@ -77,31 +77,10 @@ def construct_conflict_graph(clusters):
     eclusters_x, eclusters_y, scores = zip(*eclusters)
 
     # represents the contraints over x-axis and y-axis
-    edges_x = get_1D_overlap(eclusters_x)
-    edges_y = get_1D_overlap(eclusters_y)
+    constraints_x = get_1D_overlap_fast(eclusters_x)
+    constraints_y = get_1D_overlap_fast(eclusters_y)
 
-    return nodes, edges_x, edges_y
-
-
-def format_clq(nodes, edges, q):
-    
-    """
-    Example:
-
-    5 0
-    0 1
-    0 2
-
-    """
-    clq_handle = cStringIO.StringIO()
-    clq_handle.write("%d %d\n" % (len(nodes), q))
-    for i, j in edges:
-        clq_handle.write("%d %d\n" % (i, j))
-
-    clq_data = clq_handle.getvalue()
-    clq_handle.close()
-
-    return clq_data
+    return nodes, constraints_x, constraints_y 
 
 
 #___formulate mixed integer programming instance____________________________________
@@ -151,21 +130,12 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
 def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", verbose=False):
     
     qb, qa = quota # flip it
-    nodes, edges_x, edges_y = construct_conflict_graph(clusters)
+    nodes, constraints_x, constraints_y = construct_conflict_graph(clusters)
 
     if self_match:
-        clq_data = format_clq(nodes, edges_x+edges_y, qa)
-        constraints = BKSolver(clq_data, work_dir=work_dir).results
-
+        constraints = constraints_x | constraints_y
         lp_data = format_lp(nodes, constraints, qa, constraints, qb)
-
     else:
-        clq_data_x = format_clq(nodes, edges_x, qa)
-        constraints_x = BKSolver(clq_data_x, work_dir=work_dir).results
-
-        clq_data_y = format_clq(nodes, edges_y, qb)
-        constraints_y = BKSolver(clq_data_y, work_dir=work_dir).results
-
         lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
 
     if solver=="SCIP":

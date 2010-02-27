@@ -45,14 +45,10 @@ Dependencies:
     sudo chmod +x !$
     scip
 
-- compile program ``bk_cliques`` shipped within this package::
-
-    make
-
 
 Usage
 -----
-- Look at a sample input (``.dag`` or ``.cluster`` file), and change your file accordingly. Mostly I recommend the ``.cluster`` format::
+``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.dag`` and ``.maf``) to ``.qa`` format. Look at a sample input (``.dag`` or ``.qa`` file), and change your file accordingly. Mostly I recommend the ``.qa`` format::
 
     # cluster1
     chr1 pos1 chr2 pos2 score
