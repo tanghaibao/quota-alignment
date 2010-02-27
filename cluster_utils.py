@@ -18,7 +18,6 @@ a plain cluster file looks like:
 import math
 import sys
 from itertools import groupby
-from optparse import OptionParser
 
 
 # copied from brentp's dag_chainer.py
@@ -66,7 +65,7 @@ def read_clusters(filename, precision=1, dag_fmt=False):
         if len(cluster) == 0: continue
         clusters.append(cluster)
 
-    print >>sys.stderr, "total (%d) clusters in '%s'" % \
+    print >>sys.stderr, "read (%d) clusters in '%s'" % \
             (len(clusters), filename)
 
     return clusters
@@ -85,7 +84,7 @@ def write_clusters(filehandle, clusters):
             (len(clusters), filehandle.name)
 
 
-def make_range(clusters):
+def make_range(clusters, extend=0):
     # convert to interval ends from a list of anchors
     eclusters = [] 
     for cluster in clusters:
@@ -97,7 +96,8 @@ def make_range(clusters):
         ychr, ymin = min(ylist) 
         ychr, ymax = max(ylist)
 
-        eclusters.append(((xchr, xmin, xmax), (ychr, ymin, ymax), score))
+        eclusters.append(((xchr, xmin, xmax+extend),\
+                          (ychr, ymin, ymax+extend), score))
 
     return eclusters
 
@@ -196,27 +196,38 @@ def calc_coverage(clusters, self=False):
 
 if __name__ == '__main__':
 
-    usage = "Convert between .cluster (or .dag to .cluster) \n" \
+    from optparse import OptionParser, OptionGroup
+
+    usage = "Conversion from (or .dag, .maf, .qa) to .qa format\n" \
+            "as required by quota_align.py if not in .qa format\n\n" \
             "%prog [options] input output \n" \
             ".. if output not given, will write to stdout"
     parser = OptionParser(usage)
 
-    parser.add_option("-d", "--dag", dest="dag_fmt",
+    input_group = OptionGroup(parser, "Input options")
+    input_group.add_option("--dag", dest="dag_fmt",
             action="store_true", default=False,
-            help="dag formatted input [default: %default]")
-    parser.add_option("-p", "--precision", dest="precision",
+            help="convert dag formatted input")
+    input_group.add_option("--maf", dest="maf_fmt",
+            action="store_true", default=False,
+            help="convert maf formatted input")
+    parser.add_option_group(input_group)
+
+    output_group = OptionGroup(parser, "Output options")
+    output_group.add_option("--precision", dest="precision",
             action="store", type="int", default=1,
             help="convert scores into int(score*precision) " \
-                "since MIP algorithm only deals with integer weights "\
-                "[default: %default]")
-    parser.add_option("-c", "--calc_coverage", dest="calc_coverage",
+                "since quota_align only deals with integer scores "\
+                "[default: no multiplier]")
+    output_group.add_option("--calc_coverage", dest="calc_coverage",
             action="store_true", default=False,
-            help="calculate the total length these clusters occupy "\
+            help="calculate the total length the clusters occupy "\
                 "[default: %default]")
-    parser.add_option("-r", "--print_grimm", dest="print_grimm",
+    output_group.add_option("--print_grimm", dest="print_grimm",
             action="store_true", default=False,
             help="print two integer sequences for permutation GRIMM analysis "\
                  "[default: %default]")
+    parser.add_option_group(output_group)
 
     (options, args) = parser.parse_args()
 
@@ -241,6 +252,6 @@ if __name__ == '__main__':
 
     if options.calc_coverage:
         total_len_x, total_len_y = calc_coverage(clusters)
-        print >>sys.stderr, "Total length on x-axis:", total_len_x 
-        print >>sys.stderr, "Total length on y-axis:", total_len_y
+        print >>sys.stderr, "total length on x-axis:", total_len_x 
+        print >>sys.stderr, "total length on y-axis:", total_len_y
 

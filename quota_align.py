@@ -13,11 +13,11 @@ import os
 import sys
 import pprint
 import cStringIO
-from optparse import OptionParser
+import itertools
 
 from cluster_utils import read_clusters, write_clusters, \
         make_range, calc_coverage
-from box_utils import get_2doverlap
+from box_utils import get_2Doverlap, get_2Doverlap_fast
 from clq_solvers import BKSolver
 from lp_solvers import GLPKSolver, SCIPSolver
 
@@ -50,29 +50,23 @@ def box_relaxed_overlap(boxa, boxb):
 
 def merge_clusters(chain, clusters):
 
-    # there are breakpoints induced by inversions and by translocations
-    # inversion-breakpoints are excessive breakpoints that I want to remove
-    
+    # due to the problem of chaining, some chains might overlap each other
+    # these need to be removed
+
     chain_num = len(chain)
-    eclusters = make_range(clusters)
+    eclusters = make_range(clusters, extend=Kmax)
     #pprint.pprint(eclusters)
 
-    mergeables = get_2doverlap(chain, eclusters, Kmax)
-
-    to_merge = {} 
-    for mergeable in mergeables:
-        for m in mergeable:
-            to_merge[m] = min(mergeables[m])
+    mergeables = get_2Doverlap(chain, eclusters)
 
     merged_chain = []
-    for c in chain:
-        if to_merge[c]==c: # i.e. parent of mergeables
-            merged_chain.append(c)
+    for mergeable in mergeables:
+        merged_mother = min(mergeable)
+        g = (clusters[x] for x in mergeable)
+        merged_cluster = itertools.chain(*g)
 
-    # refresh clusters list, merge chains
-    for k, v in to_merge.iteritems():
-        if to_merge[k]!=k: # i.e. not map to self
-            clusters[v] = list(set(clusters[v])|set(clusters[k]))
+        clusters[merged_mother] = list(set(merged_cluster))
+        merged_chain.append(merged_mother)
 
     # maintain the x-sort
     [cluster.sort() for cluster in clusters]
@@ -87,8 +81,8 @@ def recursive_merge_clusters(chain, clusters):
     # as some rearrangment patterns are recursive, the extension of blocks
     # will take several iterations
     while 1: 
+        print >>sys.stderr, "merging... (%d)" % len(chain)
         chain, updated = merge_clusters(chain, clusters)
-        print >>sys.stderr, "merging..."
         if not updated: break
 
     return chain, clusters
@@ -223,42 +217,52 @@ def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", 
 
 if __name__ == '__main__':
 
+    from optparse import OptionParser, OptionGroup
+
     usage = "Quota synteny alignment \n" \
             "%prog [options] cluster_file "
     parser = OptionParser(usage)
 
-    parser.add_option("-m", "--merge", dest="merge",
+    merge_group = OptionGroup(parser, "Merge function")
+    merge_group.add_option("--merge", dest="merge",
             action="store_true", default=False,
             help="`block merging` procedure -- merge blocks that are close to "\
                     "each other, merged clusters are stored in cluster_file.merged "\
                     "[default: %default]")
-    parser.add_option("-k", "--Kmax", dest="Kmax", 
+    merge_group.add_option("--Km", dest="Kmax", 
             type="int", default=0,
             help="merge blocks that are close to each other within distance cutoff"\
                     "(cutoff for `block merging`) "\
                     "[default: %default genes] ")
-    parser.add_option("-q", "--quota", dest="quota", 
+    parser.add_option_group(merge_group)
+
+    quota_group = OptionGroup(parser, "Quota mapping function")
+    quota_group.add_option("--quota", dest="quota", 
             type="string", default="1:1",
             help="`quota mapping` procedure -- screen blocks to constrain mapping"\
                     " (useful for orthology), "\
                     "put in the format like (#subgenomes expected for genome X):"\
                     "(#subgenomes expected for genome Y) "\
                     "[default: %default]")
-    parser.add_option("-n", "--Nmax", dest="Nmax", 
+    quota_group.add_option("--Dm", dest="Nmax", 
             type="int", default=40,
             help="distance cutoff to tolerate two blocks that are "\
                     "slightly overlapping (cutoff for `quota mapping`) "\
                     "[default: %default genes] ")
-    parser.add_option("-f", "--self_match", dest="self_match",
+    parser.add_option_group(quota_group)
+
+    other_group = OptionGroup(parser, "Other options")
+    other_group.add_option("--self_match", dest="self_match",
             action="store_true", default=False,
             help="you might turn this on when you use this to screen paralogous blocks, "\
-                    "if you have already reduced mirrored blocks into non-redundant set")
-    parser.add_option("-s", "--solver", dest="solver",
+                 "especially if you have reduced mirrored blocks into non-redundant set")
+    other_group.add_option("--solver", dest="solver",
             type="string", default="SCIP",
             help="use MIP solver, only SCIP or GLPK are currently implemented "\
-                    "[default: %default]")
-    parser.add_option("-v", dest="verbose", action="store_true", default=False,
+                 "[default: %default]")
+    other_group.add_option("--verbose", dest="verbose", action="store_true", default=False,
                       help="show verbose solver output")
+    parser.add_option_group(other_group)
 
     (options, args) = parser.parse_args()
 
@@ -306,7 +310,7 @@ if __name__ == '__main__':
         write_clusters(fw, clusters)
 
     # below runs `quota mapping`
-    if "-q" not in sys.argv and "--quota" not in sys.argv:
+    if "--quota" not in sys.argv:
         sys.exit(0)
 
     op = os.path

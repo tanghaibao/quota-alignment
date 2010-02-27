@@ -1,19 +1,20 @@
 #!/bin/bash
 
 # test case 1
-#cluster_utils.py --dag athaliana_alyrata.dag athaliana_alyrata.cluster 
-quota_align.py --merge --quota 1:1 data/athaliana_alyrata.cluster
-#cluster_utils.py --print_grimm athaliana_alyrata.cluster.filtered 
+cluster_utils.py --dag data/athaliana_alyrata.dag data/athaliana_alyrata.qa
+quota_align.py --merge --quota 1:1 data/athaliana_alyrata.qa
+diff data/athaliana_alyrata.qa.merged scratch/athaliana_alyrata.cluster.merged
+#cluster_utils.py --print_grimm data/athaliana_alyrata.qa.filtered 
 
 # test case 2
-#cluster_utils.py --precision 1000 grape_grape grape_grape.cluster
-#quota_align.py --merge --self --quota 2:2 grape_grape.cluster
+#cluster_utils.py --precision 1000 data/grape_grape data/grape_grape.qa
+#quota_align.py --merge --self --quota 2:2 data/grape_grape.qa
 
 # test case 3 
-#cluster_utils.py --precision 1000 maize_sorghum maize_sorghum.cluster
-#quota_align.py --merge --quota 2:1 maize_sorghum.cluster
+#cluster_utils.py --precision 1000 data/maize_sorghum data/maize_sorghum.qa
+#quota_align.py --merge --quota 2:1 data/maize_sorghum.qa
 
 # test case 4
-#cluster_utils.py --precision 1000 brachy_brachy brachy_brachy.cluster
-#quota_align.py --merge --self --quota 1:1 brachy_brachy.cluster
+#cluster_utils.py --precision 1000 data/brachy_brachy data/brachy_brachy.qa
+#quota_align.py --merge --self --quota 1:1 data/brachy_brachy.qa
 

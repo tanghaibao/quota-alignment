@@ -10,7 +10,7 @@ Typically in comparative genomics, we can identify anchors, chain them into synt
 
 This program tries to screen the clusters based on the coverage constraints imposed by the user. For example, between rice-sorghum comparison, we can enforce 1:1 ratio to get all the orthologous blocks; or maybe 4:2 to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
-To see the algorithm in action without installing, please go to `CoGe SynMap tool <http://synteny.cnr.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options".
+To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://synteny.cnr.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (`quota_align.py --quota`).
 
 Installation
 ------------
