@@ -2,11 +2,8 @@
 # -*- coding: UTF-8 -*-
 
 """
-This script implements a high performance algorithm for finding 2d intersecting rectangles, assume a list of boxes with (x1, x2, y1, y2) showing the extent:
-
-1. take the x-ends and sort, then use a sweep line to scan the x-ends
-2. if it is left end, test the y-axis intersection with an `active` set, also update `active`
-3. if it is right end, remove the block from the `active` set
+This script implements algorithm for finding intersecting rectangles, both on the 2d dotplot,
+and on the projection onto axis
 
 """
 
@@ -33,9 +30,29 @@ def box_overlap(boxa, boxb):
            range_overlap(boxa_yrange, boxb_yrange)
 
 
-def get_2Doverlap(chain, eclusters):
+def get_1D_overlap(eclusters):
     """
-    Naive implementation -- check all pairwise combinations, O(n^2) complexity
+    Naive implementation for 1D overlapping
+    returns pairs of ids that are in conflict
+
+    """
+
+    overlap_pairs = []
+
+    nnodes = len(eclusters) 
+    for i in xrange(nnodes):
+        for j in xrange(i+1, nnodes):
+            if range_overlap(eclusters[i], eclusters[j]): 
+                overlap_pairs.append((i, j))
+
+    return overlap_pairs
+
+
+def get_2D_overlap(chain, eclusters):
+    """
+    Naive implementation for 2d overlapping
+    check all pairwise combinations, O(n^2) complexity
+    returns Grouper() object
 
     """
 
@@ -55,7 +72,7 @@ def get_2Doverlap(chain, eclusters):
 
 
 # Faster version
-def get_2Doverlap_fast(chain, eclusters, Kmax):
+def get_2D_overlap_fast(chain, eclusters, Kmax):
     """
     Implements a sweep line algorithm when n is large:
     assume block has x_ends, and y_ends for the bounds

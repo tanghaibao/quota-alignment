@@ -17,7 +17,7 @@ import itertools
 
 from cluster_utils import read_clusters, write_clusters, \
         make_range, calc_coverage
-from box_utils import range_overlap, get_2Doverlap, get_2Doverlap_fast
+from box_utils import get_1D_overlap, get_2D_overlap, get_2D_overlap_fast
 from clq_solvers import BKSolver
 from lp_solvers import GLPKSolver, SCIPSolver
 
@@ -33,7 +33,7 @@ def merge_clusters(chain, clusters):
     eclusters = make_range(clusters, extend=Kmax)
     #pprint.pprint(eclusters)
 
-    mergeables = get_2Doverlap(chain, eclusters)
+    mergeables = get_2D_overlap(chain, eclusters)
 
     merged_chain = []
     for mergeable in mergeables:
@@ -75,16 +75,10 @@ def construct_conflict_graph(clusters):
     nodes = [(i+1, c[-1]) for i, c in enumerate(eclusters)]
 
     eclusters_x, eclusters_y, scores = zip(*eclusters)
-    # represents the contraints over x-axis and y-axis
-    edges_x, edges_y = [], []
 
-    nnodes = len(nodes)
-    for i in xrange(nnodes):
-        for j in xrange(i+1, nnodes):
-            if range_overlap(eclusters_x[i], eclusters_x[j]): 
-                edges_x.append((i, j))
-            if range_overlap(eclusters_y[i], eclusters_y[j]): 
-                edges_y.append((i, j))
+    # represents the contraints over x-axis and y-axis
+    edges_x = get_1D_overlap(eclusters_x)
+    edges_y = get_1D_overlap(eclusters_y)
 
     return nodes, edges_x, edges_y
 
@@ -226,7 +220,7 @@ if __name__ == '__main__':
             type="int", default=40,
             help="distance cutoff to tolerate two blocks that are "\
                     "slightly overlapping (cutoff for `quota mapping`) "\
-                    "[default: %default genes] ")
+                    "[default: %default units (gene dist or bp dist, depending on the input)]")
     parser.add_option_group(quota_group)
 
     other_group = OptionGroup(parser, "Other options")
