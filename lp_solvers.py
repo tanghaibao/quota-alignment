@@ -45,7 +45,7 @@ class AbstractMIPSolver(object):
             os.mkdir(work_dir)
 
         lpfile = work_dir + "/data.lp" # problem instance
-        print >>sys.stderr, "write problem spec to '%s'" % lpfile
+        print >>sys.stderr, "write MIP instance to '%s'" % lpfile
 
         fw = file(lpfile, "w")
         fw.write(lp_data)

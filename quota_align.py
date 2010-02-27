@@ -17,33 +17,9 @@ import itertools
 
 from cluster_utils import read_clusters, write_clusters, \
         make_range, calc_coverage
-from box_utils import get_2Doverlap, get_2Doverlap_fast
+from box_utils import range_overlap, get_2Doverlap, get_2Doverlap_fast
 from clq_solvers import BKSolver
 from lp_solvers import GLPKSolver, SCIPSolver
-
-
-def range_relaxed_overlap(a, b):
-    # 1-d version of box_relaxed_overlap
-    a_chr, a_min, a_max = a
-    b_chr, b_min, b_max = b
-    # must be on the same chromosome
-    if a_chr!=b_chr: return False 
-    
-    # some very small segments might slip through
-    # therefore we also control for the segment size
-    Mmax = min(a_max-a_min, b_max-b_min, Nmax)
-    # to handle ranges that slightly overlap
-    return (a_min <= b_max - Mmax) and \
-           (b_min <= a_max - Mmax)
-
-
-def box_relaxed_overlap(boxa, boxb):
-
-    boxa_xrange, boxa_yrange, _ = boxa
-    boxb_xrange, boxb_yrange, _ = boxb
-
-    return range_relaxed_overlap(boxa_xrange, boxb_xrange) or \
-           range_relaxed_overlap(boxa_yrange, boxb_yrange)
 
 
 #___merge clusters to combine inverted blocks (optional)___________________________
@@ -94,18 +70,20 @@ def construct_conflict_graph(clusters):
 
     # check pairwise cluster comparison, if they overlap then mark edge as `conflict'
 
-    eclusters = make_range(clusters)
+    eclusters = make_range(clusters, extend=-Nmax)
     # (1-based index, cluster score)
     nodes = [(i+1, c[-1]) for i, c in enumerate(eclusters)]
+
+    eclusters_x, eclusters_y, scores = zip(*eclusters)
     # represents the contraints over x-axis and y-axis
     edges_x, edges_y = [], []
 
     nnodes = len(nodes)
     for i in xrange(nnodes):
         for j in xrange(i+1, nnodes):
-            if range_relaxed_overlap(eclusters[i][0], eclusters[j][0]): 
+            if range_overlap(eclusters_x[i], eclusters_x[j]): 
                 edges_x.append((i, j))
-            if range_relaxed_overlap(eclusters[i][1], eclusters[j][1]): 
+            if range_overlap(eclusters_y[i], eclusters_y[j]): 
                 edges_y.append((i, j))
 
     return nodes, edges_x, edges_y
@@ -284,8 +262,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if options.self_match and qa!=qb:
-        raise Exception, "when comparing genome to itself, quota must be the same number (like 1:1, 2:2) "\
-            "you have %s" % options.quota
+        raise Exception, "when comparing genome to itself, quota must be the same number " \
+                "(like 1:1, 2:2) you have %s" % options.quota
     if qa > 12 or qb > 12:
         raise Exception, "quota %s set too loose, make quota less than 12 each" % options.quota
     quota = (qa, qb) 
@@ -315,7 +293,7 @@ if __name__ == '__main__':
 
     op = os.path
     work_dir = op.join(op.dirname(op.abspath(cluster_file)), "work")
-    print >>sys.stderr, "write intermediate files to '%s'" % work_dir
+
     clusters = solve_lp(clusters, quota, work_dir=work_dir, \
             self_match=options.self_match, \
             solver=options.solver, verbose=options.verbose)

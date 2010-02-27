@@ -12,7 +12,7 @@ This script implements a high performance algorithm for finding 2d intersecting 
 
 from grouper import Grouper
 
-def range_mergeable(a, b):
+def range_overlap(a, b):
     # 1-d version of box_mergeable
     a_chr, a_min, a_max = a
     b_chr, b_min, b_max = b
@@ -24,13 +24,13 @@ def range_mergeable(a, b):
            (b_min <= a_max)
 
 
-def box_mergeable(boxa, boxb):
+def box_overlap(boxa, boxb):
 
     boxa_xrange, boxa_yrange, _ = boxa
     boxb_xrange, boxb_yrange, _ = boxb
 
-    return range_mergeable(boxa_xrange, boxb_xrange) and \
-           range_mergeable(boxa_yrange, boxb_yrange)
+    return range_overlap(boxa_xrange, boxb_xrange) and \
+           range_overlap(boxa_yrange, boxb_yrange)
 
 
 def get_2Doverlap(chain, eclusters):
@@ -48,7 +48,7 @@ def get_2Doverlap(chain, eclusters):
         mergeables.join(ci)
         for j in xrange(i+1, chain_num):
             cj = chain[j]
-            if box_mergeable(eclusters[ci], eclusters[cj]):
+            if box_overlap(eclusters[ci], eclusters[cj]):
                 mergeables.join(ci, cj)
 
     return mergeables
