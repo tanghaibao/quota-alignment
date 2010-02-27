@@ -21,34 +21,7 @@ def range_overlap(a, b):
            (b_min <= a_max)
 
 
-def box_overlap(boxa, boxb):
-
-    boxa_xrange, boxa_yrange, _ = boxa
-    boxb_xrange, boxb_yrange, _ = boxb
-
-    return range_overlap(boxa_xrange, boxb_xrange) and \
-           range_overlap(boxa_yrange, boxb_yrange)
-
-
-def get_1D_overlap(eclusters):
-    """
-    Naive implementation for 1D overlapping
-    returns pairs of ids that are in conflict
-
-    """
-
-    overlap_pairs = []
-
-    nnodes = len(eclusters) 
-    for i in xrange(nnodes):
-        for j in xrange(i+1, nnodes):
-            if range_overlap(eclusters[i], eclusters[j]): 
-                overlap_pairs.append((i, j))
-
-    return overlap_pairs
-
-
-def get_1D_overlap_fast(eclusters, depth=1):
+def get_1D_overlap(eclusters, depth=1):
     """
     Naive implementation for 1D overlapping
     returns cliques of ids that are in conflict
@@ -60,15 +33,15 @@ def get_1D_overlap_fast(eclusters, depth=1):
 
     ends = []
     for i, (chr, left, right) in enumerate(eclusters):
-        ends.append((chr, -left, i))
-        ends.append((chr, right, i))
-    ends.sort(key=lambda x: (x[0], abs(x[1])))
+        ends.append((chr, left, 0, i))
+        ends.append((chr, right, 1, i))
+    ends.sort()
 
     chr_last = ""
-    for chr, pos, i in ends:
+    for chr, pos, left_right, i in ends:
         if chr != chr_last: active.clear()
-        if pos <= 0: active.add(i) # left end
-        else: active.remove(i)     # right end
+        if left_right==0: active.add(i) 
+        else: active.remove(i)    
 
         if len(active) > depth:
             overlap_set.add(tuple(sorted(active)))
@@ -79,30 +52,6 @@ def get_1D_overlap_fast(eclusters, depth=1):
 
 
 def get_2D_overlap(chain, eclusters):
-    """
-    Naive implementation for 2d overlapping
-    check all pairwise combinations, O(n^2) complexity
-    returns Grouper() object
-
-    """
-
-    chain_num = len(chain)
-
-    mergeables = Grouper() # disjoint sets of clusters that can be merged
-    # check all pairwise combinations
-    for i in xrange(chain_num):
-        ci = chain[i]
-        mergeables.join(ci)
-        for j in xrange(i+1, chain_num):
-            cj = chain[j]
-            if box_overlap(eclusters[ci], eclusters[cj]):
-                mergeables.join(ci, cj)
-
-    return mergeables
-
-
-# Faster version
-def get_2D_overlap_fast(chain, eclusters, Kmax):
     """
     Implements a sweep line algorithm when n is large:
     assume block has x_ends, and y_ends for the bounds
@@ -115,9 +64,30 @@ def get_2D_overlap_fast(chain, eclusters, Kmax):
     """
 
     mergeables = Grouper()
+    active = set()
+
+    x_ends = []
+    for i, (range_x, range_y, score) in enumerate(eclusters):
+        chr, left, right = range_x
+        x_ends.append((chr, left, 0, i))
+        x_ends.append((chr, right, 1, i))
+    x_ends.sort()
+
+    chr_last = ""
+    for chr, pos, left_right, i in x_ends:
+        if chr != chr_last: active.clear()
+        if left_right==0: 
+            active.add(i) 
+            for x in active:
+                # check y-overlap
+                if range_overlap(eclusters[x][1], eclusters[i][1]):
+                    mergeables.join(x, i)
+        else: # right end
+            active.remove(i) 
+
+        chr_last = chr
 
     return mergeables
-
 
 
 if __name__ == '__main__':

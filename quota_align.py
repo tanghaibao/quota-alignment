@@ -17,8 +17,7 @@ import itertools
 
 from cluster_utils import read_clusters, write_clusters, \
         make_range, calc_coverage
-from box_utils import get_1D_overlap, get_1D_overlap_fast, \
-        get_2D_overlap, get_2D_overlap_fast
+from box_utils import get_1D_overlap, get_2D_overlap
 from lp_solvers import GLPKSolver, SCIPSolver
 
 
@@ -77,8 +76,8 @@ def construct_conflict_graph(clusters):
     eclusters_x, eclusters_y, scores = zip(*eclusters)
 
     # represents the contraints over x-axis and y-axis
-    constraints_x = get_1D_overlap_fast(eclusters_x)
-    constraints_y = get_1D_overlap_fast(eclusters_y)
+    constraints_x = get_1D_overlap(eclusters_x)
+    constraints_y = get_1D_overlap(eclusters_y)
 
     return nodes, constraints_x, constraints_y 
 
