@@ -53,10 +53,13 @@ Usage
 -----
 ``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.dag`` and ``.maf``) to ``.qa`` format. Look at sample input (in the ``data/`` folder), and change your file accordingly. Mostly I recommend the ``.qa`` format::
 
-    # cluster1
+    #
+    chr1 pos1 chr3 pos2 score
+    #
     chr1 pos1 chr2 pos2 score
-    ...
-    # cluster2
+    chr1 pos1 chr2 pos2 score
+
+Note that the symbol ``#`` separates each cluster, which contains one or more *anchor points*. Anchor points within the same cluster must be on the same chromosome pair. If you don't plan to use a chainer, you can put each anchor point in its own cluster, and then rely on ``quota-align.py --merge``.
 
 The utility script ``cluster_utils.py`` can be used for converting the Freeling lab ``.dag`` format to the ``.qa`` format, it can also print out the block sequences for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
 

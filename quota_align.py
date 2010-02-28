@@ -3,7 +3,7 @@
 
 """
 This python program does the following:
-1. merge 2D-overlapping blocks recursively (optional) 
+1. merge 2D-overlapping blocks 
 2. build conflict graph where edges represent 1D-overlap among blocks
 3. feed the data into the linear programming solver
 """
@@ -20,14 +20,13 @@ from box_utils import get_1D_overlap, get_2D_overlap
 from lp_solvers import GLPKSolver, SCIPSolver
 
 
-#___merge clusters to combine inverted blocks (optional)___________________________
-
 def merge_clusters(chain, clusters):
     """
     Due to the problem of chaining, some chains might overlap each other
     these need to be merged 
     """
     chain_num = len(chain)
+
     eclusters = make_range(clusters, extend=Dmax)
     #pprint.pprint(eclusters)
 
@@ -47,6 +46,8 @@ def merge_clusters(chain, clusters):
 
     # check if anything is merged
     updated = (len(merged_chain) != chain_num)
+    print >>sys.stderr, "merging... (%d->%d)" % (chain_num, len(merged_chain))
+
     return merged_chain, updated
 
 
@@ -56,16 +57,13 @@ def recursive_merge_clusters(chain, clusters):
     will take several iterations
     """
     while 1: 
-        print >>sys.stderr, "merging... (%d)" % len(chain)
         chain, updated = merge_clusters(chain, clusters)
         if not updated: break
 
     return chain, clusters
 
 
-#___populate conflict graph before sending into MIP solver__________________________
-
-def construct_conflict_graph(clusters, quota=(1,1)):
+def get_constraints(clusters, quota=(1,1)):
     """
     Check pairwise cluster comparison, if they overlap then mark edge as conflict
     """
@@ -82,8 +80,6 @@ def construct_conflict_graph(clusters, quota=(1,1)):
 
     return nodes, constraints_x, constraints_y 
 
-
-#___formulate mixed integer programming instance____________________________________
 
 def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     """
@@ -137,7 +133,7 @@ def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", 
     Solve the formatted LP instance
     """
     qb, qa = quota # flip it
-    nodes, constraints_x, constraints_y = construct_conflict_graph(clusters, (qa, qb))
+    nodes, constraints_x, constraints_y = get_constraints(clusters, (qa, qb))
 
     if self_match:
         constraints_x = constraints_y = constraints_x | constraints_y
@@ -186,7 +182,7 @@ if __name__ == '__main__':
 
     quota_group = OptionGroup(parser, "Quota mapping function")
     quota_group.add_option("--quota", dest="quota", 
-            type="string", default="1:1",
+            type="string", default=None,
             help="`quota mapping` procedure -- screen blocks to constrain mapping"\
                     " (useful for orthology), "\
                     "put in the format like (#subgenomes expected for genome X):"\
@@ -199,14 +195,15 @@ if __name__ == '__main__':
                     "[default: %default units (gene or bp dist)]")
     parser.add_option_group(quota_group)
 
+    supported_solvers = ("SCIP", "GLPK")
     other_group = OptionGroup(parser, "Other options")
     other_group.add_option("--self", dest="self_match",
             action="store_true", default=False,
             help="you might turn this on when screening paralogous blocks, "\
                  "especially if you have reduced mirrored blocks into non-redundant set")
     other_group.add_option("--solver", dest="solver",
-            type="string", default="SCIP",
-            help="use MIP solver, only SCIP or GLPK are currently implemented "\
+            default="SCIP", choices=supported_solvers,
+            help="use MIP solver, must be one of %s " % (supported_solvers,) +\
                  "[default: %default]")
     other_group.add_option("--verbose", dest="verbose", action="store_true", 
             default=False, help="show verbose solver output")
@@ -219,25 +216,22 @@ if __name__ == '__main__':
     except:
         sys.exit(parser.print_help())
 
-    # option sanity check
-    solver_options = ("SCIP", "GLPK")
-    assert options.solver in solver_options, \
-            "solver must be one of %s" % solver_options
+    # sanity check for the quota
+    if options.quota:
+        try:
+            qa, qb = options.quota.split(":")
+            qa, qb = int(qa), int(qb)
+        except:
+            print >>sys.stderr, "quota string should be the form x:x (2:4, 1:3, etc.)"
+            sys.exit(1)
 
-    try:
-        qa, qb = options.quota.split(":")
-        qa, qb = int(qa), int(qb)
-    except:
-        print >>sys.stderr, "quota string should be the form x:x (2:4, 1:3, etc.)"
-        sys.exit(1)
-
-    if options.self_match and qa!=qb:
-        raise Exception, "when comparing genome to itself, " \
-                "quota must be the same number " \
-                "(like 1:1, 2:2) you have %s" % options.quota
-    if qa > 12 or qb > 12:
-        raise Exception, "quota %s too loose, make it <=12 each" % options.quota
-    quota = (qa, qb) 
+        if options.self_match and qa!=qb:
+            raise Exception, "when comparing genome to itself, " \
+                    "quota must be the same number " \
+                    "(like 1:1, 2:2) you have %s" % options.quota
+        if qa > 12 or qb > 12:
+            raise Exception, "quota %s too loose, make it <=12 each" % options.quota
+        quota = (qa, qb) 
 
     clusters = read_clusters(qa_file)
     for cluster in clusters:
@@ -251,17 +245,18 @@ if __name__ == '__main__':
     # below runs `block merging`
     if options.merge: 
         chain = range(len(clusters))
-        chain, clusters = recursive_merge_clusters(chain, clusters)
+        #chain, clusters = recursive_merge_clusters(chain, clusters)
+        chain, updated = merge_clusters(chain, clusters)
 
         merged_qa_file = qa_file + ".merged"
         fw = file(merged_qa_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
 
-    # below runs `quota mapping`
-    if "--quota" not in sys.argv:
+    if not options.quota:
         sys.exit(0)
 
+    # below runs `quota mapping`
     op = os.path
     work_dir = op.join(op.dirname(op.abspath(qa_file)), "work")
 

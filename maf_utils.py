@@ -89,7 +89,7 @@ def screen_maf(qa_file, maf_file):
 
     fp.close()
 
-    print >>sys.stderr, "write screened alignments (%d) to %s" % \
+    print >>sys.stderr, "write (%d) alignments to '%s'" % \
             (len(screened_alignments), filtered_maf)
 
 

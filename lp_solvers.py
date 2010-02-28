@@ -3,7 +3,7 @@
 
 """
 Implement a few MIP solvers,
-based on benchmark @ http://scip.zib.de/
+based on benchmark found on <http://scip.zib.de/>
 SCIP solver is ~16x faster than GLPK solver
 However, I found in rare cases it will segfault. Therefore the default is still
 GLPK solver, please switch to SCIP solver for difficult cases.

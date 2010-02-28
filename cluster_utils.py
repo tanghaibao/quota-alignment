@@ -39,16 +39,41 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
     return max_match if matchScore > max_match else matchScore
 
 
-def read_clusters(filename, precision=1, dag_fmt=False):
+def read_maf(maf_file):
     """
-    Read cluster info from .qa and .dag (dag_fmt=True) file
+    Read cluster info from .maf file
+    """
+    from maf_utils import get_clusters
+
+    return get_clusters(maf_file)
+
+
+def read_raw(filename, precision=1):
+    """
+    Read cluster info from raw anchor point lists
     """
     fp = file(filename)
+    clusters = []
 
-    # clusters contain only bounds, point_clusters contain all points
+    for row in fp:
+        if row[0]=="#": continue
+        atoms = row.split()
+        ca, a, cb, b, score = atoms
+        score = int(float(score) * precision) 
+        a, b = int(a), int(b)
+        gene1, gene2 = (ca, a), (cb, b)
+        clusters.append([(gene1, gene2, score)])
+
+    return clusters
+
+
+def read_clusters(filename, precision=1, fmt="qa"):
+    """
+    Read cluster info from .qa and .dag file
+    """
+    fp = file(filename)
     clusters = [] 
     
-    fmt = "dag" if dag_fmt else "cluster"
     row = fp.readline()
     j = 1
     while row:
@@ -58,11 +83,11 @@ def read_clusters(filename, precision=1, dag_fmt=False):
         while row and row[0] != "#":
             atoms = row.rstrip().split("\t")
             if row.strip()== "": break
-            if dag_fmt:
+            if fmt=="dag":
                 ca, a, cb, b, evalue = atoms[0], atoms[2], atoms[4], \
                                        atoms[6], atoms[8]
                 score = int(scoringF(float(evalue)))
-            else: # handle my own cluster fmt
+            else: # handle .qa fmt
                 ca, a, cb, b, score = atoms
             score = int(float(score) * precision) 
             a, b = int(a), int(b)
@@ -81,24 +106,16 @@ def read_clusters(filename, precision=1, dag_fmt=False):
     return clusters
 
 
-def read_maf(maf_file):
-    """
-    Read cluster info from .maf file
-    """
-    from maf_utils import get_clusters
-
-    return get_clusters(maf_file)
-
-
 def write_clusters(filehandle, clusters):
     for cluster in clusters:
         cluster_score = sum(x[-1] for x in cluster)
-        filehandle.write("# cluster score %d \n" % (cluster_score)) 
+        filehandle.write("###\n") 
         for gene1, gene2, score in cluster:
             # gene is (name, posn)
             filehandle.write("%s\t%d\t" % gene1 )
             filehandle.write("%s\t%d\t" % gene2 )
             filehandle.write("%d\n" % score )
+
     print >>sys.stderr, "write (%s) clusters to '%s'" % \
             (len(clusters), filehandle.name)
 
@@ -126,6 +143,8 @@ def make_range(clusters, extend=0):
         # because extend can be negative values, we don't want it to be less than min
         if xmax < xmin: xmin, xmax = xmax, xmin
         if ymax < ymin: ymin, ymax = ymax, ymin
+        #if xmax < xmin: xmax = xmin
+        #if ymax < ymin: ymax = ymin
 
         eclusters.append(((xchr, xmin, xmax),\
                           (ychr, ymin, ymax), score))
@@ -238,20 +257,20 @@ if __name__ == '__main__':
 
     from optparse import OptionParser, OptionGroup
 
-    usage = "Conversion from (.dag, .maf, .qa) to .qa format\n" \
+    supported_fmts = ("qa", "dag", "maf", "raw")
+
+    usage = "Conversion from %s to .qa format\n" % (supported_fmts,) +\
             "as required to run before quota_align.py " \
-            "if your input is not in .qa format\n\n" \
+            "if input is not in .qa format\n\n" \
             "%prog [options] input output \n" \
             ".. if output not given, will write to stdout"
     parser = OptionParser(usage)
 
     input_group = OptionGroup(parser, "Input options")
-    input_group.add_option("--dag", dest="dag_fmt",
-            action="store_true", default=False,
-            help="convert dag formatted input")
-    input_group.add_option("--maf", dest="maf_fmt",
-            action="store_true", default=False,
-            help="convert maf formatted input")
+    input_group.add_option("--format", dest="fmt",
+            action="store", default="qa", choices=supported_fmts, 
+            help="specify the input format, must be one of %s " % (supported_fmts,) + \
+                 "[default: %default]")
     parser.add_option_group(input_group)
 
     output_group = OptionGroup(parser, "Output options")
@@ -266,12 +285,12 @@ if __name__ == '__main__':
                 "[default: %default]")
     output_group.add_option("--print_grimm", dest="print_grimm",
             action="store_true", default=False,
-            help="print two integer sequences for permutation GRIMM analysis "\
+            help="print two integer sequences for GRIMM permutation analysis "\
                  "[default: %default]")
     parser.add_option_group(output_group)
 
     (options, args) = parser.parse_args()
-
+    
     try:
         input_file = args[0]
         if len(args) == 2:
@@ -283,10 +302,12 @@ if __name__ == '__main__':
         sys.exit(parser.print_help())
 
     # file format conversion
-    if options.maf_fmt:
+    if options.fmt=="maf":
         clusters = read_maf(input_file)
+    elif options.fmt=="raw":
+        clusters = read_raw(input_file, options.precision)
     else:
-        clusters = read_clusters(input_file, options.precision, options.dag_fmt)
+        clusters = read_clusters(input_file, options.precision, options.fmt)
 
     if options.print_grimm:
         print_grimm(clusters)
