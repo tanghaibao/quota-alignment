@@ -2,25 +2,21 @@
 # -*- coding: UTF-8 -*-
 
 """
-This script implements algorithm for finding intersecting rectangles, both on the 2D dotplot,
-and on the projection onto 1D-axis; as both routines are used by quota_align.py
-
+This script implements algorithm for finding intersecting rectangles, 
+both on the 2D dotplot and 1D-projection, both routines are used by quota_align.py
 """
 
 from grouper import Grouper
 
 def range_overlap(a, b):
     """
-    Example:
     >>> range_overlap(("1", 30, 45), ("1", 45, 55))
     True
     >>> range_overlap(("1", 30, 45), ("1", 57, 68))
     False
     >>> range_overlap(("1", 30, 45), ("2", 42, 55))
     False
-
     """
-
     a_chr, a_min, a_max = a
     b_chr, b_min, b_max = b
     # must be on the same chromosome
@@ -32,9 +28,7 @@ def get_1D_overlap(eclusters, depth=1):
     """
     Find blocks that are 1D overlapping,
     returns cliques of block ids that are in conflict
-
     """
-
     overlap_set = set() 
     active = set()
 
@@ -67,9 +61,7 @@ def get_2D_overlap(chain, eclusters):
     2. if left end, test y-axis intersection of current block with `active` set;
        also put this block in the `active` set
     3. if right end, remove block from the `active` set
-
     """
-
     mergeables = Grouper()
     active = set()
 

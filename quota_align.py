@@ -2,11 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 """
-this python program does the following
-1. merge dags by recursively merging dag bounds
-2. build conflict graph where edges represent 1d-`overlap' between blocks
+This python program does the following:
+1. merge 2D-overlapping blocks recursively (optional) 
+2. build conflict graph where edges represent 1D-overlap among blocks
 3. feed the data into the linear programming solver
-
 """
 
 import os
@@ -27,9 +26,7 @@ def merge_clusters(chain, clusters):
     """
     Due to the problem of chaining, some chains might overlap each other
     these need to be merged 
-
     """
-
     chain_num = len(chain)
     eclusters = make_range(clusters, extend=Dmax)
     #pprint.pprint(eclusters)
@@ -58,7 +55,6 @@ def recursive_merge_clusters(chain, clusters):
     As some rearrangment patterns are recursive, the extension of blocks
     will take several iterations
     """
-
     while 1: 
         print >>sys.stderr, "merging... (%d)" % len(chain)
         chain, updated = merge_clusters(chain, clusters)
@@ -72,9 +68,7 @@ def recursive_merge_clusters(chain, clusters):
 def construct_conflict_graph(clusters, quota=(1,1)):
     """
     Check pairwise cluster comparison, if they overlap then mark edge as conflict
-
     """
-
     qa, qb = quota
     eclusters = make_range(clusters, extend=-Nmax)
     # (1-based index, cluster score)
@@ -93,16 +87,12 @@ def construct_conflict_graph(clusters, quota=(1,1)):
 
 def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     """
-    Example:
-
     Maximize
      4 x1 + 2 x2 + 3 x3 + x4
     Subject To
      x1 + x2 <= 1
     End
-    
     """
-
     lp_handle = cStringIO.StringIO()
 
     lp_handle.write("Maximize\n ")
@@ -127,7 +117,7 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
             additions = " + ".join("x%d" % (x+1) for x in c)
             lp_handle.write(" %s <= %d\n" % (additions, qb))
         num_of_constraints += len(constraints_y)
-    print >>sys.stderr, "number of binary variables (%d), number of constraints (%d)" % \
+    print >>sys.stderr, "number of variables (%d), number of constraints (%d)" % \
             (len(nodes), num_of_constraints)
 
     lp_handle.write("Binary\n")
@@ -145,9 +135,7 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
 def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", verbose=False):
     """
     Solve the formatted LP instance
-
     """
-    
     qb, qa = quota # flip it
     nodes, constraints_x, constraints_y = construct_conflict_graph(clusters, (qa, qb))
 
@@ -157,16 +145,16 @@ def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", 
     lp_data = format_lp(nodes, constraints_x, qa, constraints_y, qb)
 
     if solver=="SCIP":
-        filtered_list = SCIPSolver(lp_data, work_dir=work_dir, verbose=verbose).results
+        filtered_list = SCIPSolver(lp_data, work_dir, verbose=verbose).results
         if not filtered_list:
             print >>sys.stderr, "SCIP fails... trying GLPK"
-            filtered_list = GLPKSolver(lp_data, work_dir=work_dir, verbose=verbose).results
+            filtered_list = GLPKSolver(lp_data, work_dir, verbose=verbose).results
             
     elif solver=="GLPK":
-        filtered_list = GLPKSolver(lp_data, work_dir=work_dir, verbose=verbose).results
+        filtered_list = GLPKSolver(lp_data, work_dir, verbose=verbose).results
         if not filtered_list:
             print >>sys.stderr, "GLPK fails... trying SCIP"
-            filtered_list = SCIPSolver(lp_data, work_dir=work_dir, verbose=verbose).results
+            filtered_list = SCIPSolver(lp_data, work_dir, verbose=verbose).results
     
     # non-overlapping set on both axis
     filtered_clusters = [clusters[x] for x in filtered_list]
@@ -193,7 +181,7 @@ if __name__ == '__main__':
             type="int", default=0,
             help="merge blocks that are close to each other within distance cutoff"\
                     "(cutoff for `block merging`) "\
-                    "[default: %default units (gene dist or bp dist, depending on the input)] ")
+                    "[default: %default units (gene or bp dist)] ")
     parser.add_option_group(merge_group)
 
     quota_group = OptionGroup(parser, "Quota mapping function")
@@ -208,20 +196,20 @@ if __name__ == '__main__':
             type="int", default=40,
             help="distance cutoff to tolerate two blocks that are "\
                     "slightly overlapping (cutoff for `quota mapping`) "\
-                    "[default: %default units (gene dist or bp dist, depending on the input)]")
+                    "[default: %default units (gene or bp dist)]")
     parser.add_option_group(quota_group)
 
     other_group = OptionGroup(parser, "Other options")
     other_group.add_option("--self", dest="self_match",
             action="store_true", default=False,
-            help="you might turn this on when you use this to screen paralogous blocks, "\
+            help="you might turn this on when screening paralogous blocks, "\
                  "especially if you have reduced mirrored blocks into non-redundant set")
     other_group.add_option("--solver", dest="solver",
             type="string", default="SCIP",
             help="use MIP solver, only SCIP or GLPK are currently implemented "\
                  "[default: %default]")
-    other_group.add_option("--verbose", dest="verbose", action="store_true", default=False,
-                      help="show verbose solver output")
+    other_group.add_option("--verbose", dest="verbose", action="store_true", 
+            default=False, help="show verbose solver output")
     parser.add_option_group(other_group)
 
     (options, args) = parser.parse_args()
@@ -240,14 +228,15 @@ if __name__ == '__main__':
         qa, qb = options.quota.split(":")
         qa, qb = int(qa), int(qb)
     except:
-        print >>sys.stderr, "quota string should be the form x:x (like 2:4, 1:3, etc.)"
+        print >>sys.stderr, "quota string should be the form x:x (2:4, 1:3, etc.)"
         sys.exit(1)
 
     if options.self_match and qa!=qb:
-        raise Exception, "when comparing genome to itself, quota must be the same number " \
+        raise Exception, "when comparing genome to itself, " \
+                "quota must be the same number " \
                 "(like 1:1, 2:2) you have %s" % options.quota
     if qa > 12 or qb > 12:
-        raise Exception, "quota %s set too loose, make quota less than 12 each" % options.quota
+        raise Exception, "quota %s too loose, make it <=12 each" % options.quota
     quota = (qa, qb) 
 
     clusters = read_clusters(qa_file)
@@ -290,9 +279,9 @@ if __name__ == '__main__':
         print >>sys.stderr, "coverage: %.1f%% (self-match)" % \
                 (filtered_len_x*100./total_len_x)
     else:
-        print >>sys.stderr, "genome x coverage: %.1f%%" % \
+        print >>sys.stderr, "genome X coverage: %.1f%%" % \
                 (filtered_len_x*100./total_len_x)
-        print >>sys.stderr, "genome y coverage: %.1f%%" % \
+        print >>sys.stderr, "genome Y coverage: %.1f%%" % \
                 (filtered_len_y*100./total_len_y)
 
 

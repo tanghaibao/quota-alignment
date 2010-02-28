@@ -10,8 +10,6 @@ GLPK solver, please switch to SCIP solver for difficult cases.
 
 The input lp_data is assumed in .lp format, see below
 
-Example:
-
 >>> lp_data = '''
 ... Maximize
 ...  5 x1 + 3 x2 + 2 x3
@@ -26,7 +24,6 @@ Example:
 [0, 1]
 >>> print SCIPSolver(lp_data).results
 [0, 1]
-
 """
 
 import os
@@ -37,7 +34,6 @@ from subprocess import call
 class AbstractMIPSolver(object):
     """
     Base class for LP solvers
-
     """
     def __init__(self, lp_data,
                  work_dir=op.join(op.dirname(__file__),"work"),
@@ -75,9 +71,7 @@ class AbstractMIPSolver(object):
 class GLPKSolver(AbstractMIPSolver):
     """
     GNU Linear Programming Kit (GLPK) solver, wrapper for calling GLPSOL executable
-
     """
-
     def run(self, lpfile, work_dir="work", verbose=False):
 
         outfile = work_dir + "/data.lp.out" # verbose output
@@ -101,6 +95,7 @@ class GLPKSolver(AbstractMIPSolver):
 
 
     def parse_output(self, listfile):
+
         filtered_list = []
 
         fp = file(listfile)
@@ -121,7 +116,6 @@ class SCIPSolver(AbstractMIPSolver):
     """
     SCIP solver, wrapper for calling SCIP executable
     """
-    
     def run(self, lpfile, work_dir="work", verbose=False):
 
         outfile = work_dir + "/data.lp.out" # verbose output

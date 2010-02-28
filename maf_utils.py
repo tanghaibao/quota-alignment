@@ -2,9 +2,8 @@
 # -*- coding: UTF-8 -*-
 
 """
-This script uses the great bx-python tool <http://bitbucket.org/james_taylor/bx-python/>
+This script uses bx-python tool <http://bitbucket.org/james_taylor/bx-python/>
 to parse the .maf file in order to convert the blocks into .qa format.
-
 """
 
 import os
@@ -19,9 +18,7 @@ def alignment_to_cluster(alignment):
     """
     From the pairwise alignment into a cluster format, providing two (fake) anchors
     to mark the block boundary
-
     """
-
     region_a, region_b = alignment
     chr_a, start_a, stop_a, strand_a, score_a = region_a
     chr_b, start_b, stop_b, strand_b, score_b = region_b
@@ -38,9 +35,7 @@ def alignment_to_cluster(alignment):
 def get_clusters(maf_file):
     """
     Called in cluster_utils, from maf_file to get clusters to convert in .qa format
-
     """
-    
     base, ext = os.path.splitext(maf_file)
 
     fp = file(maf_file)
@@ -64,9 +59,7 @@ def get_clusters(maf_file):
 def screen_maf(qa_file, maf_file):
     """
     Screen the .maf file based on the cluster info in the qa_file
-
     """
-
     clusters = read_clusters(qa_file)
     filtered_maf = maf_file + ".filtered"
 

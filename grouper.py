@@ -10,11 +10,10 @@ class Grouper(object):
     """
     This class provides a lightweight way to group arbitrary objects
     together into disjoint sets when a full-blown graph data structure
-    would be overkill.
-
+    would be overkill. 
+    
     Objects can be joined using .join(), tested for connectedness
     using .joined(), and all disjoint sets can be retrieved using list(g)
-    
     The objects being joined must be hashable.
 
     >>> g = Grouper()
@@ -31,9 +30,7 @@ class Grouper(object):
     False
     >>> g.joined('a', 'd')
     False
-
     """   
-
     def __init__(self, init=[]):
         mapping = self._mapping = {}
         for x in init:
@@ -42,9 +39,7 @@ class Grouper(object):
     def join(self, a, *args):
         """
         Join given arguments into the same set. Accepts one or more arguments.
-      
         """
-      
         mapping = self._mapping
         set_a = mapping.setdefault(a, [a])
 
@@ -64,9 +59,7 @@ class Grouper(object):
     def joined(self, a, b):
         """
         Returns True if a and b are members of the same set.
-      
         """
-      
         mapping = self._mapping
         try:
             return mapping[a] is mapping[b]
@@ -77,9 +70,7 @@ class Grouper(object):
     def __iter__(self):
         """
         Returns an iterator returning each of the disjoint sets as a list.
-      
         """
-
         seen = set()
         for elem, group in self._mapping.iteritems():
             if elem not in seen:
@@ -90,9 +81,7 @@ class Grouper(object):
     def __getitem__(self, key):
         """
         Returns the set that a certain key belongs.
-       
         """
-       
         return tuple(self._mapping[key])
 
 
