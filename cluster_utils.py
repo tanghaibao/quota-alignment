@@ -180,10 +180,10 @@ def print_grimm(clusters, filehandle=sys.stdout):
     """
     x_projection, y_projection = make_projection(clusters)
 
-    print >>filehandle, ">genome x"
+    print >>filehandle, ">genome X"
     chr_list = print_intseq(x_projection, filehandle)
     print >>sys.stderr, ",".join(chr_list)
-    print >>filehandle, ">genome y"
+    print >>filehandle, ">genome Y"
     chr_list = print_intseq(y_projection, filehandle)
     print >>sys.stderr, ",".join(chr_list)
 

@@ -10,7 +10,7 @@ Typically in comparative genomics, we can identify anchors, chain them into synt
 
 This program tries to screen the clusters based on the coverage constraints imposed by the user. For example, between rice-sorghum comparison, we can enforce 1:1 ratio to get all the orthologous blocks; or maybe 4:2 to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
-To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://synteny.cnr.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
+To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://toxic.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
 
 Installation
 ------------
@@ -19,11 +19,11 @@ Installation
 
     git clone http://github.com/tanghaibao/quota-alignment.git 
 
-Dependencies:
+Required dependencies:
 
 - Python version >=2.6
 
-- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_::
+- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_. Please put the executable ``glpsol`` on the PATH::
 
     wget http://ftp.gnu.org/gnu/glpk/glpk-4.42.tar.gz
     tar xzf glpk-4.42.tar.gz
@@ -32,10 +32,9 @@ Dependencies:
     make
     sudo make install
 
-``glpsol`` executable must be found in the user's path.
+Optional dependencies:
 
-
-- (*optional*) SCIP mixed integer programming solver linked with `CLP <http://scip.zib.de/download.shtml>`_, choose the binary that fits your machine, note that in order to run SCIP, LAPACK needs to be installed too::
+- SCIP mixed integer programming solver linked with `CLP <http://scip.zib.de/download.shtml>`_, choose the binary that fits your machine, note that in order to run SCIP, LAPACK needs to be installed too. Please put executable ``scip`` on the PATH::
 
     unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
     sudo apt-get install liblapack-dev
@@ -45,7 +44,9 @@ Dependencies:
     sudo cp scip-1.2.0.linux.x86_64.gnu.opt.clp /usr/local/bin/scip
     sudo chmod +x !$
 
-``scip`` executable must be found in the user's path.
+- ``bx-python`` package, this is only required when user wants to analyze ``.maf`` formatted data::
+
+    easy_install bx-python
 
 
 Usage
