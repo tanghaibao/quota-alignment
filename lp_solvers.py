@@ -138,8 +138,9 @@ class SCIPSolver(AbstractMIPSolver):
 
         fp = file(outfile)
         for row in fp:
-            if row.startswith("objective value"): break
-            obj_row = row
+            if row.startswith("objective value"): 
+                obj_row = row
+                break
 
         results = []
         for row in fp:
@@ -151,7 +152,7 @@ class SCIPSolver(AbstractMIPSolver):
             results.append(int(x[1:])-1) # 0-based indexing
 
         if results:
-            self.obj_val = int(row.split(":")[1])
+            self.obj_val = int(obj_row.split(":")[1])
 
         return results
 

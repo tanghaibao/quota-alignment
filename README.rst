@@ -59,9 +59,7 @@ Usage
 
 The utility script ``cluster_utils.py`` can be used for converting the Freeling lab ``.dag`` format to the ``.cluster`` format, it can also print out the block sequences for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
 
-- Run ``quota_align.py`` and read the possible options.
-
-also see ``run.sh`` for usage.
+Run ``quota_align.py`` and read the possible options. also see ``run.sh`` for usage.
 
 
 Cookbook

@@ -104,7 +104,7 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     for i, score in nodes:
         lp_handle.write("+ %d x%d " % (score, i))
         # SCIP does not like really long string per row
-        #if records%10==0: lp_handle.write("\n")
+        if records%10==0: lp_handle.write("\n")
         records += 1
     lp_handle.write("\n")
     
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     parser.add_option_group(quota_group)
 
     other_group = OptionGroup(parser, "Other options")
-    other_group.add_option("--self_match", dest="self_match",
+    other_group.add_option("--self", dest="self_match",
             action="store_true", default=False,
             help="you might turn this on when you use this to screen paralogous blocks, "\
                  "especially if you have reduced mirrored blocks into non-redundant set")

@@ -78,19 +78,10 @@ def read_clusters(filename, precision=1, dag_fmt=False):
 
 def read_maf(maf_file):
     
-    from maf_utils import get_alignments
+    from maf_utils import get_alignments, alignment_to_cluster
 
     alignments = get_alignments(maf_file)
-    clusters = []
-    # convert alignments into cluster formats
-    for region_a, region_b in alignments:
-        chr_a, start_a, stop_a, strand_a, score_a = region_a
-        chr_b, start_b, stop_b, strand_b, score_b = region_b
-        cluster = []
-        if strand_b=="-": start_b, stop_b = stop_b, start_b
-        cluster.append(((chr_a, start_a), (chr_b, start_b), score_a))
-        cluster.append(((chr_a, stop_a), (chr_b, stop_b), 0))
-        clusters.append(cluster)
+    clusters = [alignment_to_cluster(alignment) for alignment in alignments]
 
     return clusters
 

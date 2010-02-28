@@ -12,72 +12,96 @@ import sys
 from bx.align import maf
 from bx import interval_index_file
 
+from cluster_utils import read_clusters
 
-# Stolen from Brad Chapman's blog
-# http://bcbio.wordpress.com/2009/07/26/sorting-genomic-alignments-using-python/
-def build_index(in_file, index_file):
-    indexes = interval_index_file.Indexes()
 
-    in_handle = open(in_file)
-    reader = maf.Reader(in_handle)
-    while 1:
-        pos = reader.file.tell()
-        rec = reader.next()
-        if rec is None: break
-        for c in rec.components:
-            indexes.add(c.src, c.forward_strand_start,
-                    c.forward_strand_end, pos, max=c.src_size )
+def alignment_to_cluster(alignment):
 
-    index_handle = open(index_file, "w")
-    print >>sys.stderr, "build %s for fast record retrieval" % index_file
-    indexes.write(index_handle)
+    region_a, region_b = alignment
+    chr_a, start_a, stop_a, strand_a, score_a = region_a
+    chr_b, start_b, stop_b, strand_b, score_b = region_b
+    if strand_a!=strand_b: 
+        start_b, stop_b = stop_b, start_b
+
+    cluster = []
+    cluster.append(((chr_a, start_a), (chr_b, start_b), score_a))
+    cluster.append(((chr_a, stop_a), (chr_b, stop_b), 0))
+
+    return cluster
 
 
 def get_alignments(maf_file):
     
     base, ext = os.path.splitext(maf_file)
 
-    # build index file for fast retrieval
-    index_file = maf_file + ".index"
-    if not os.path.exists(index_file):
-        build_index(maf_file, index_file)
-    index = maf.Indexed(maf_file, index_file)
-
     fp = file(maf_file)
     reader = maf.Reader(fp)
 
     alignments = []
-    while 1:
-        rec = reader.next()
-        if rec is None: break
-        intervals = []
+    for rec in reader:
+        alignment = []
         for c in rec.components:
             chr, left, right, strand, weight = c.src, c.forward_strand_start, \
                     c.forward_strand_end, c.strand, rec.score
-            intervals.append((chr, left, right, strand, weight))
-        alignments.append(intervals)
+            alignment.append((chr, left, right, strand, weight))
+        alignments.append(alignment)
 
     fp.close()
 
     return alignments 
 
 
+def screen_maf(qa_file, maf_file):
+
+    clusters = read_clusters(qa_file)
+    filtered_maf = maf_file + ".filtered"
+
+    screened_alignments = set() 
+    for cluster in clusters:
+        for anchor in cluster:
+            score = anchor[-1]
+            if score!=0:
+                screened_alignments.add(anchor)
+
+    fp = file(maf_file)
+    reader = maf.Reader(fp)
+
+    fw = file(filtered_maf, "w")
+    writer = maf.Writer(fw)
+
+    for rec in reader:
+        alignment = []
+        for c in rec.components:
+            chr, left, right, strand, weight = c.src, c.forward_strand_start, \
+                    c.forward_strand_end, c.strand, rec.score
+            alignment.append((chr, left, right, strand, weight))
+        cluster = alignment_to_cluster(alignment)
+        if cluster[0] in screened_alignments:
+            writer.write(rec)
+
+    fp.close()
+
+    print >>sys.stderr, "write screened alignments (%d) to %s" % \
+            (len(screened_alignments), filtered_maf)
+
 
 if __name__ == '__main__':
     
     from optparse import OptionParser
 
-    usage = "%prog [options] infile"
-    parser = OptionParser(usage=usage, version="%prog 1.0")
+    usage = "Use information in qa_file to screen maf_file\n" \
+            "%prog [options] qa_file maf_file"
+    parser = OptionParser(usage)
 
     (options, args) = parser.parse_args()
     try:
-        maf_file = args[0]
+        qa_file, maf_file = args
     except:
-        print >>sys.stderr, "please send input file name"
         sys.exit(parser.print_help())
 
-    alignments = get_alignments(maf_file)
-    for alignment in alignments:
-        print alignment
+    #alignments = get_alignments(maf_file)
+    #for alignment in alignments:
+    #    print alignment
+
+    screen_maf(qa_file, maf_file)
 
