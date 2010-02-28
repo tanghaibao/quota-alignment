@@ -8,7 +8,7 @@ Introduction
 
 Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use ad-hoc rules to screen these blocks. 
 
-This program tries to screen the clusters based on the coverage constraints imposed by the user. For example, between rice-sorghum comparison, we can enforce 1:1 ratio to get all the orthologous blocks; or maybe 4:2 to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
+This program tries to screen the clusters based on the coverage constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
 To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://toxic.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
 
@@ -23,7 +23,7 @@ Required dependencies:
 
 - Python version >=2.6
 
-- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_. Please put the executable ``glpsol`` on the PATH::
+- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_. Please put the executable ``glpsol`` on the ``PATH``::
 
     wget http://ftp.gnu.org/gnu/glpk/glpk-4.42.tar.gz
     tar xzf glpk-4.42.tar.gz
@@ -34,7 +34,7 @@ Required dependencies:
 
 Optional dependencies:
 
-- SCIP mixed integer programming solver linked with `CLP <http://scip.zib.de/download.shtml>`_, choose the binary that fits your machine, note that in order to run SCIP, LAPACK needs to be installed too. Please put executable ``scip`` on the PATH::
+- `SCIP <http://scip.zib.de/download.shtml>`_ faster integer programming solver, choose the binary (32-bit, 64-bit) that fits your machine and select the one linked with CLP (for fast speed), note that in order to run SCIP, `LAPACK <http://www.netlib.org/lapack/>`_ needs to be installed too. Please put executable ``scip`` on the ``PATH``::
 
     unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
     sudo apt-get install liblapack-dev
@@ -51,21 +51,21 @@ Optional dependencies:
 
 Usage
 -----
-``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.dag`` and ``.maf``) to ``.qa`` format. Look at a sample input (``.dag`` or ``.qa`` file), and change your file accordingly. Mostly I recommend the ``.qa`` format::
+``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.dag`` and ``.maf``) to ``.qa`` format. Look at sample input (in the ``data/`` folder), and change your file accordingly. Mostly I recommend the ``.qa`` format::
 
     # cluster1
     chr1 pos1 chr2 pos2 score
     ...
     # cluster2
 
-The utility script ``cluster_utils.py`` can be used for converting the Freeling lab ``.dag`` format to the ``.cluster`` format, it can also print out the block sequences for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
+The utility script ``cluster_utils.py`` can be used for converting the Freeling lab ``.dag`` format to the ``.qa`` format, it can also print out the block sequences for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
 
-Run ``quota_align.py`` and read the possible options. also see ``run.sh`` for usage.
+Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options. 
 
 
 Cookbook
 --------
-To be written.
+Test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
 
 
 Reference

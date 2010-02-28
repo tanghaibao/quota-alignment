@@ -120,12 +120,15 @@ def make_range(clusters, extend=0):
         ychr, ymin = min(ylist) 
         ychr, ymax = max(ylist)
 
+        # allow fuzziness to the boundary
+        xmax += extend
+        ymax += extend
         # because extend can be negative values, we don't want it to be less than min
-        new_xmax = max(xmin, xmax+extend)
-        new_ymax = max(ymin, ymax+extend)
+        if xmax < xmin: xmin, xmax = xmax, xmin
+        if ymax < ymin: ymin, ymax = ymax, ymin
 
-        eclusters.append(((xchr, xmin, new_xmax),\
-                          (ychr, ymin, new_ymax), score))
+        eclusters.append(((xchr, xmin, xmax),\
+                          (ychr, ymin, ymax), score))
 
     return eclusters
 
