@@ -10,7 +10,8 @@ and on the projection onto 1D-axis; as both routines are used by quota_align.py
 from grouper import Grouper
 
 def range_overlap(a, b):
-    """Example:
+    """
+    Example:
     >>> range_overlap(("1", 30, 45), ("1", 45, 55))
     True
     >>> range_overlap(("1", 30, 45), ("1", 57, 68))
@@ -29,7 +30,7 @@ def range_overlap(a, b):
 
 def get_1D_overlap(eclusters, depth=1):
     """
-    find blocks that are 1D overlapping,
+    Find blocks that are 1D overlapping,
     returns cliques of block ids that are in conflict
 
     """
@@ -63,9 +64,9 @@ def get_2D_overlap(chain, eclusters):
     assume block has x_ends, and y_ends for the bounds
 
     1. sort x_ends, and take a sweep line to scan the x_ends
-    2. if this is left end, test y-axis intersection of current block with `active` set;
+    2. if left end, test y-axis intersection of current block with `active` set;
        also put this block in the `active` set
-    3. if this is right end, remove block from the `active` set
+    3. if right end, remove block from the `active` set
 
     """
 

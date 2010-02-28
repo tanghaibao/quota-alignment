@@ -24,9 +24,11 @@ from lp_solvers import GLPKSolver, SCIPSolver
 #___merge clusters to combine inverted blocks (optional)___________________________
 
 def merge_clusters(chain, clusters):
+    """
+    Due to the problem of chaining, some chains might overlap each other
+    these need to be merged 
 
-    # due to the problem of chaining, some chains might overlap each other
-    # these need to be removed
+    """
 
     chain_num = len(chain)
     eclusters = make_range(clusters, extend=Dmax)
@@ -52,9 +54,11 @@ def merge_clusters(chain, clusters):
 
 
 def recursive_merge_clusters(chain, clusters):
+    """
+    As some rearrangment patterns are recursive, the extension of blocks
+    will take several iterations
+    """
 
-    # as some rearrangment patterns are recursive, the extension of blocks
-    # will take several iterations
     while 1: 
         print >>sys.stderr, "merging... (%d)" % len(chain)
         chain, updated = merge_clusters(chain, clusters)
@@ -66,8 +70,10 @@ def recursive_merge_clusters(chain, clusters):
 #___populate conflict graph before sending into MIP solver__________________________
 
 def construct_conflict_graph(clusters, quota=(1,1)):
+    """
+    Check pairwise cluster comparison, if they overlap then mark edge as conflict
 
-    # check pairwise cluster comparison, if they overlap then mark edge as `conflict'
+    """
 
     qa, qb = quota
     eclusters = make_range(clusters, extend=-Nmax)
@@ -86,7 +92,6 @@ def construct_conflict_graph(clusters, quota=(1,1)):
 #___formulate mixed integer programming instance____________________________________
 
 def format_lp(nodes, constraints_x, qa, constraints_y, qb):
-
     """
     Example:
 
@@ -97,6 +102,7 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     End
     
     """
+
     lp_handle = cStringIO.StringIO()
 
     lp_handle.write("Maximize\n ")
@@ -137,6 +143,10 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
 
 
 def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", verbose=False):
+    """
+    Solve the formatted LP instance
+
+    """
     
     qb, qa = quota # flip it
     nodes, constraints_x, constraints_y = construct_conflict_graph(clusters, (qa, qb))

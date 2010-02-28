@@ -28,6 +28,11 @@ CONSTANT_MATCH_SCORE=None
 MAX_MATCH_SCORE=50.0
 
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
+    """
+    This function converts the BLAST evalue to a score between [0, 50];
+    used to be compatible with the .dag format
+
+    """
     if not constant_match is None:
         return constant_match
     if evalue == 0.0: return max_match
@@ -37,6 +42,10 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
 
 
 def read_clusters(filename, precision=1, dag_fmt=False):
+    """
+    Read cluster info from .qa and .dag (dag_fmt=True) file
+
+    """
 
     fp = file(filename)
 
@@ -77,13 +86,14 @@ def read_clusters(filename, precision=1, dag_fmt=False):
 
 
 def read_maf(maf_file):
+    """
+    Read cluster info from .maf file
+
+    """
     
-    from maf_utils import get_alignments, alignment_to_cluster
+    from maf_utils import get_clusters
 
-    alignments = get_alignments(maf_file)
-    clusters = [alignment_to_cluster(alignment) for alignment in alignments]
-
-    return clusters
+    return get_clusters(maf_file)
 
 
 def write_clusters(filehandle, clusters):
@@ -100,9 +110,13 @@ def write_clusters(filehandle, clusters):
 
 
 def make_range(clusters, extend=0):
-    # convert to interval ends from a list of anchors
-    # extend modifies the xmax, ymax boundary of the box, which can be positive or negative
-    # this is useful when we want to make the range as fuzzy as we specify
+    """
+    Convert to interval ends from a list of anchors
+    extend modifies the xmax, ymax boundary of the box, 
+    which can be positive or negative
+    very useful when we want to make the range as fuzzy as we specify
+
+    """
 
     eclusters = [] 
     for cluster in clusters:
@@ -125,9 +139,12 @@ def make_range(clusters, extend=0):
 
 
 def make_projection(clusters):
-    # let the x-projection of the blocks 1..n
-    # output the y-projection sequence for downstream permutation analysis
-    # both lists are nested one level as we have integer sequences for multiple chromosomes
+    """
+    Let the x-projection of the blocks 1..n,
+    output the y-projection sequence for downstream permutation analysis,
+    both lists are nested one level as we have integer sequences for many chromosomes
+
+    """
     
     clusters.sort()
     x_projection, y_projection = [], []
@@ -155,8 +172,12 @@ def make_projection(clusters):
 
 
 def print_intseq(projection, filehandle):
-    # from a list of (chr, pos, signed_id) => a nested list of multichromosome
-    # signed integers
+    """
+    Convert from a list of (chr, pos, signed_id) => a nested list of multichromosome
+    contains signed integers
+    
+    """
+    
     g = groupby(projection, lambda x: x[0])
     chr_list, intseq = zip(*[(chr, list(x[2] for x in blocks)) for chr, blocks in g])
     for s in intseq:
@@ -166,7 +187,11 @@ def print_intseq(projection, filehandle):
 
 
 def print_grimm(clusters, filehandle=sys.stdout):
-    # GRIMM-style output, for more info, see http://nbcr.sdsc.edu/GRIMM/grimm.cgi
+    """
+    GRIMM-style output, for more info, see http://nbcr.sdsc.edu/GRIMM/grimm.cgi
+    
+    """
+    
     x_projection, y_projection = make_projection(clusters)
 
     print >>filehandle, ">genome x"
@@ -178,7 +203,11 @@ def print_grimm(clusters, filehandle=sys.stdout):
 
 
 def interval_union(intervals):
-    # return total size of intervals, expect interval as (chr, left, right)
+    """
+    Returns total size of intervals, expect interval as (chr, left, right)
+
+    """
+
     intervals.sort()
 
     total_len = 0
@@ -199,7 +228,11 @@ def interval_union(intervals):
 
 
 def calc_coverage(clusters, self=False):
-    # calculates the length that's covered, for coverage statistics
+    """
+    Calculates the length that's covered, for coverage statistics
+
+    """
+
     eclusters = make_range(clusters)
 
     intervals_x = [x[0] for x in eclusters]
@@ -221,7 +254,8 @@ if __name__ == '__main__':
     from optparse import OptionParser, OptionGroup
 
     usage = "Conversion from (.dag, .maf, .qa) to .qa format\n" \
-            "as required to run before quota_align.py if your input is not in .qa format\n\n" \
+            "as required to run before quota_align.py " \
+            "if your input is not in .qa format\n\n" \
             "%prog [options] input output \n" \
             ".. if output not given, will write to stdout"
     parser = OptionParser(usage)

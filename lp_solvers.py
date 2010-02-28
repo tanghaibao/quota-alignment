@@ -35,8 +35,10 @@ import sys
 from subprocess import call
 
 class AbstractMIPSolver(object):
+    """
+    Base class for LP solvers
 
-    # Base class
+    """
     def __init__(self, lp_data,
                  work_dir=op.join(op.dirname(__file__),"work"),
                  verbose=False):
@@ -71,6 +73,10 @@ class AbstractMIPSolver(object):
 
 
 class GLPKSolver(AbstractMIPSolver):
+    """
+    GNU Linear Programming Kit (GLPK) solver, wrapper for calling GLPSOL executable
+
+    """
 
     def run(self, lpfile, work_dir="work", verbose=False):
 
@@ -112,6 +118,9 @@ class GLPKSolver(AbstractMIPSolver):
 
 
 class SCIPSolver(AbstractMIPSolver):
+    """
+    SCIP solver, wrapper for calling SCIP executable
+    """
     
     def run(self, lpfile, work_dir="work", verbose=False):
 
@@ -158,6 +167,7 @@ class SCIPSolver(AbstractMIPSolver):
 
 
 if __name__ == '__main__':
+
     import doctest
     doctest.testmod()
 
