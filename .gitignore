@@ -5,5 +5,5 @@
 !*.rst
 !makefile
 !.gitignore
-!data/*.qa
+!data/*
 !doc/*

@@ -15,6 +15,8 @@ A .qa file looks like:
 # cluster score 1263.482
 2       2840    3       3880    1.647
 2       2859    3       3867    2.560
+
+A raw file just looks like .qa file, except all cluster info are ignored, i.e. each anchor point is treated as a single cluster
 """
 
 import math

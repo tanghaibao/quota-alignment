@@ -53,9 +53,9 @@ Usage
 -----
 ``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.dag`` and ``.maf``) to ``.qa`` format. Look at sample input (in the ``data/`` folder), and change your file accordingly. Mostly I recommend the ``.qa`` format::
 
-    #
+    ###
     chr1 pos1 chr3 pos2 score
-    #
+    ###
     chr1 pos1 chr2 pos2 score
     chr1 pos1 chr2 pos2 score
 
@@ -68,7 +68,7 @@ Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options.
 
 Cookbook
 --------
-Test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
+The default package comes with the test data for case 1 and 2. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
 
 
 Reference
