@@ -58,7 +58,7 @@ def get_clusters(maf_file):
 
     fp.close()
 
-    return alignments 
+    return clusters 
 
 
 def screen_maf(qa_file, maf_file):
@@ -113,10 +113,6 @@ if __name__ == '__main__':
         qa_file, maf_file = args
     except:
         sys.exit(parser.print_help())
-
-    #alignments = get_alignments(maf_file)
-    #for alignment in alignments:
-    #    print alignment
 
     screen_maf(qa_file, maf_file)
 

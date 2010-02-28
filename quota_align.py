@@ -180,14 +180,14 @@ if __name__ == '__main__':
     from optparse import OptionParser, OptionGroup
 
     usage = "Quota synteny alignment \n" \
-            "%prog [options] cluster_file "
+            "%prog [options] qa_file "
     parser = OptionParser(usage)
 
     merge_group = OptionGroup(parser, "Merge function")
     merge_group.add_option("--merge", dest="merge",
             action="store_true", default=False,
             help="`block merging` procedure -- merge blocks that are close to "\
-                    "each other, merged clusters are stored in cluster_file.merged "\
+                    "each other, merged clusters are stored in qa_file.merged "\
                     "[default: %default]")
     merge_group.add_option("--Dm", dest="Dmax", 
             type="int", default=0,
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     try:
-        cluster_file = args[0]
+        qa_file = args[0]
     except:
         sys.exit(parser.print_help())
 
@@ -250,7 +250,7 @@ if __name__ == '__main__':
         raise Exception, "quota %s set too loose, make quota less than 12 each" % options.quota
     quota = (qa, qb) 
 
-    clusters = read_clusters(cluster_file)
+    clusters = read_clusters(qa_file)
     for cluster in clusters:
         assert len(cluster) > 0
 
@@ -264,8 +264,8 @@ if __name__ == '__main__':
         chain = range(len(clusters))
         chain, clusters = recursive_merge_clusters(chain, clusters)
 
-        merged_cluster_file = cluster_file + ".merged"
-        fw = file(merged_cluster_file, "w")
+        merged_qa_file = qa_file + ".merged"
+        fw = file(merged_qa_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
 
@@ -274,14 +274,15 @@ if __name__ == '__main__':
         sys.exit(0)
 
     op = os.path
-    work_dir = op.join(op.dirname(op.abspath(cluster_file)), "work")
+    work_dir = op.join(op.dirname(op.abspath(qa_file)), "work")
 
     clusters = solve_lp(clusters, quota, work_dir=work_dir, \
             self_match=options.self_match, \
             solver=options.solver, verbose=options.verbose)
 
-    filtered_cluster_file = cluster_file + ".filtered"
-    fw = file(filtered_cluster_file, "w")
+    filtered_qa_file = qa_file + ".filtered"
+    fw = file(filtered_qa_file, "w")
+
     write_clusters(fw, sorted(clusters))
 
     filtered_len_x, filtered_len_y = calc_coverage(clusters, options.self_match)
