@@ -78,7 +78,19 @@ def read_clusters(filename, precision=1, dag_fmt=False):
 
 def read_maf(maf_file):
     
+    from maf_utils import get_alignments
+
+    alignments = get_alignments(maf_file)
     clusters = []
+    # convert alignments into cluster formats
+    for region_a, region_b in alignments:
+        chr_a, start_a, stop_a, strand_a, score_a = region_a
+        chr_b, start_b, stop_b, strand_b, score_b = region_b
+        cluster = []
+        if strand_b=="-": start_b, stop_b = stop_b, start_b
+        cluster.append(((chr_a, start_a), (chr_b, start_b), score_a))
+        cluster.append(((chr_a, stop_a), (chr_b, stop_b), 0))
+        clusters.append(cluster)
 
     return clusters
 
@@ -154,7 +166,6 @@ def make_projection(clusters):
 def print_intseq(projection, filehandle):
     # from a list of (chr, pos, signed_id) => a nested list of multichromosome
     # signed integers
-    #print projection
     g = groupby(projection, lambda x: x[0])
     chr_list, intseq = zip(*[(chr, list(x[2] for x in blocks)) for chr, blocks in g])
     for s in intseq:

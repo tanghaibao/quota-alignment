@@ -17,50 +17,49 @@ from bx import interval_index_file
 # http://bcbio.wordpress.com/2009/07/26/sorting-genomic-alignments-using-python/
 def build_index(in_file, index_file):
     indexes = interval_index_file.Indexes()
-    with open(in_file) as in_handle:
-        reader = maf.Reader(in_handle)
-        while 1:
-            pos = reader.file.tell()
-            rec = reader.next()
-            if rec is None:
-                break
-            for c in rec.components:
-                indexes.add(c.src, c.forward_strand_start,
-                        c.forward_strand_end, pos, max=c.src_size )
 
-    with open(index_file, "w") as index_handle:
-        print >>sys.stderr, "build %s for fast retrieval" % index_file
-        indexes.write(index_handle)
-
-
-def main(options, args):
-    
-    in_file = args[0]
-    base, ext = os.path.splitext(in_file)
-
-    # build index file
-    index_file = in_file + ".index"
-    if not os.path.exists(index_file):
-        build_index(in_file, index_file)
-    index = maf.Indexed(in_file, index_file)
-
-    fp = file(in_file)
-    reader = maf.Reader(fp)
-
-    j = 0
-    rec_info = []
+    in_handle = open(in_file)
+    reader = maf.Reader(in_handle)
     while 1:
         pos = reader.file.tell()
-        rec_info.append((j/2, pos))   # position of alignment j in file
         rec = reader.next()
-        if rec is None:
-            break
+        if rec is None: break
         for c in rec.components:
-            chromosome, left, right, weight = c.src, c.forward_strand_start, \
-                    c.forward_strand_end, rec.score
-            j += 1
+            indexes.add(c.src, c.forward_strand_start,
+                    c.forward_strand_end, pos, max=c.src_size )
+
+    index_handle = open(index_file, "w")
+    print >>sys.stderr, "build %s for fast record retrieval" % index_file
+    indexes.write(index_handle)
+
+
+def get_alignments(maf_file):
+    
+    base, ext = os.path.splitext(maf_file)
+
+    # build index file for fast retrieval
+    index_file = maf_file + ".index"
+    if not os.path.exists(index_file):
+        build_index(maf_file, index_file)
+    index = maf.Indexed(maf_file, index_file)
+
+    fp = file(maf_file)
+    reader = maf.Reader(fp)
+
+    alignments = []
+    while 1:
+        rec = reader.next()
+        if rec is None: break
+        intervals = []
+        for c in rec.components:
+            chr, left, right, strand, weight = c.src, c.forward_strand_start, \
+                    c.forward_strand_end, c.strand, rec.score
+            intervals.append((chr, left, right, strand, weight))
+        alignments.append(intervals)
 
     fp.close()
+
+    return alignments 
 
 
 
@@ -68,14 +67,17 @@ if __name__ == '__main__':
     
     from optparse import OptionParser
 
-    usage = "usage: %prog [options] infile"
+    usage = "%prog [options] infile"
     parser = OptionParser(usage=usage, version="%prog 1.0")
 
     (options, args) = parser.parse_args()
-    if len(args)!=1:
-        parser.error("incorrect number of arguments")
-        parser.print_help()
-        sys.exit()
+    try:
+        maf_file = args[0]
+    except:
+        print >>sys.stderr, "please send input file name"
+        sys.exit(parser.print_help())
 
-    main(options, args)
+    alignments = get_alignments(maf_file)
+    for alignment in alignments:
+        print alignment
 

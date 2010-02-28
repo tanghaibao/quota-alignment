@@ -100,8 +100,12 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     lp_handle = cStringIO.StringIO()
 
     lp_handle.write("Maximize\n ")
+    records = 0
     for i, score in nodes:
         lp_handle.write("+ %d x%d " % (score, i))
+        # SCIP does not like really long string per row
+        #if records%10==0: lp_handle.write("\n")
+        records += 1
     lp_handle.write("\n")
     
     num_of_constraints = 0

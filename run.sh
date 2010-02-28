@@ -11,13 +11,13 @@
 
 # test case 3 
 #cluster_utils.py --precision 1000 data/maize_sorghum data/maize_sorghum.qa
-quota_align.py --merge --quota 2:1 data/maize_sorghum.qa
+#quota_align.py --merge --quota 2:1 data/maize_sorghum.qa
 
 # test case 4
 #cluster_utils.py --precision 1000 data/brachy_brachy data/brachy_brachy.qa
 #quota_align.py --merge --self --quota 1:1 data/brachy_brachy.qa
 
 # test case 5
-#cluster_utils.py --maf data/at_chr1_vs_vv_chr1.maf data/at_chr1_vs_vv_chr1.qa
-#quota_align.py --merge --quota 1:1 data/at_chr1_vs_vv_chr1.qa
+cluster_utils.py --maf data/at_chr1_vs_vv_chr1.maf data/at_chr1_vs_vv_chr1.qa
+quota_align.py --merge --quota 1:1 --Nm 5000 data/at_chr1_vs_vv_chr1.qa
 

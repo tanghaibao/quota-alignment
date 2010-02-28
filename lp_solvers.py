@@ -56,6 +56,9 @@ class AbstractMIPSolver(object):
             self.results = [] 
         else:
             self.results = self.parse_output(outfile)
+        
+        if self.results:
+            print >>sys.stderr, "optimized objective value (%d)" % self.obj_val
 
 
     def run(self, lp_data, work_dir):
@@ -99,6 +102,7 @@ class GLPKSolver(AbstractMIPSolver):
         columns, rows = header.split()
         rows = int(rows)
         data = fp.readlines()
+        self.obj_val = int(data[0].split()[-1])
         # the info are contained in the last several lines
         results = [int(x) for x in data[-rows:]]
         results = [i for i, x in enumerate(results) if x==1]
@@ -135,6 +139,7 @@ class SCIPSolver(AbstractMIPSolver):
         fp = file(outfile)
         for row in fp:
             if row.startswith("objective value"): break
+            obj_row = row
 
         results = []
         for row in fp:
@@ -144,6 +149,9 @@ class SCIPSolver(AbstractMIPSolver):
             if row.strip()=="": break # blank line ends the section
             x = row.split()[0]
             results.append(int(x[1:])-1) # 0-based indexing
+
+        if results:
+            self.obj_val = int(row.split(":")[1])
 
         return results
 
