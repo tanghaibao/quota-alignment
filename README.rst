@@ -69,7 +69,7 @@ The utility script ``cluster_utils.py`` can be used for converting various forma
 
 Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options. 
 
-.. image:: doc/ball1.gif
+.. image:: http://chart.apis.google.com/chart?cht=p3&chd=t:106,169,73,14&chds=0,169&chs=300x150&chtt=Ocean+Area&chdl=Atlantic|Pacific|Indian|Arctic&chma=0,0,0,0|70&chco=3366CC|DC3912|FF9900|109618&chp=4.7 
 
 Cookbook
 --------
