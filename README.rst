@@ -12,6 +12,9 @@ Introduction
 
 Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected coverage (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
 
+.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,75,41,23,96,68,71,34,9|98,60,27,34,56,79,58,74,18,76|84,23,69,81,47,94,60,93,64,54&chm=s,,0,,16|h,FF0000,0,0.755,1|V,FF0000,0,0.76,1&chxt=x,y&chtt=Before+Quota+alignment&chs=300x200 
+.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,41,23,71,34|98,60,34,56,74,18|84,23,81,47,93,64&chm=s,0CBF0B,0,,16&chxt=x,y&chtt=Quota+alignment+1:1&chs=300x200
+
 This program tries to screen the clusters based on the coverage constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
 To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://toxic.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
@@ -69,7 +72,6 @@ The utility script ``cluster_utils.py`` can be used for converting various forma
 
 Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options. 
 
-.. image:: http://chart.apis.google.com/chart?cht=p3&chd=t:106,169,73,14&chds=0,169&chs=300x150&chtt=Ocean+Area&chdl=Atlantic|Pacific|Indian|Arctic&chma=0,0,0,0|70&chco=3366CC|DC3912|FF9900|109618&chp=4.7 
 
 Cookbook
 --------
