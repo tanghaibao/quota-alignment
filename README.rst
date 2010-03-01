@@ -1,6 +1,10 @@
 Quota synteny alignment
 =========================
 
+:Author: Haibao Tang (tanghaibao)
+:Email: tanghaibao@gmail.com
+:License: BSD
+
 .. contents ::
 
 Introduction
@@ -34,7 +38,7 @@ Required dependencies:
 
 Optional dependencies:
 
-- `SCIP <http://scip.zib.de/download.shtml>`_ faster integer programming solver, choose the binary (32-bit, 64-bit) that fits your machine and select the one linked with CLP (for fast speed), note that in order to run SCIP, `LAPACK <http://www.netlib.org/lapack/>`_ needs to be installed too. Please put executable ``scip`` on the ``PATH``::
+- `SCIP <http://scip.zib.de/download.shtml>`_ faster integer programming solver, choose the binary (32-bit, 64-bit) that fits your machine and choose the one linked with CLP (for fast speed), note that in order to run SCIP, `LAPACK <http://www.netlib.org/lapack/>`_ needs to be installed too. Please put executable ``scip`` on the ``PATH``::
 
     unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
     sudo apt-get install liblapack-dev
@@ -51,7 +55,7 @@ Optional dependencies:
 
 Usage
 -----
-``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.dag`` and ``.maf``) to ``.qa`` format. Look at sample input (in the ``data/`` folder), and change your file accordingly. Mostly I recommend the ``.qa`` format::
+``quota_align.py`` works only on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.raw``, ``.dag`` and ``.maf``) to ``.qa`` format. Look at sample input (in the ``data/`` folder), and change your file accordingly. Mostly I recommend the ``.qa`` format, which include a list of *anchor points*::
 
     ###
     chr1 pos1 chr3 pos2 score
@@ -59,9 +63,9 @@ Usage
     chr1 pos1 chr2 pos2 score
     chr1 pos1 chr2 pos2 score
 
-Note that the symbol ``#`` separates each cluster, which contains one or more *anchor points*. Anchor points within the same cluster must be on the same chromosome pair. If you don't plan to use a chainer, you can put each anchor point in its own cluster, and then rely on ``quota-align.py --merge``.
+Each anchor point correspond to a BLAST match. Note that the symbol ``#`` separates each cluster, which contains one or more anchor points. Anchor points within the same cluster **must** be on the same chromosome pair. If you have no idea what cluster each anchor point belongs and don't plan to use chainer, you can specify the format to be ``.raw``.
 
-The utility script ``cluster_utils.py`` can be used for converting the Freeling lab ``.dag`` format to the ``.qa`` format, it can also print out the block sequences for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
+The utility script ``cluster_utils.py`` can be used for converting various formats to the ``.qa`` format, it can also print out the integer sequences (representing block ids) for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
 
 Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options. 
 
@@ -70,7 +74,59 @@ Cookbook
 --------
 The default package comes with the test data for case 1 and 2. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
 
-For finding paralogous blocks, ``--self`` option must be turned on. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately.
+If I have the BLAST anchors, how can I get the chaining and the quota-based screening?
+--------------------------------------------------------------------------------------
+You need to first figure out a way to convert the BLAST result into the following format.::
+
+    1       6       1       4848    1e-12 
+    1       7       1       4847    2e-10 
+    1       8       1       4847    0 
+    1       9       1       4846    3e-14 
+
+Where the five columns correspond to chr1, pos1, chr2, pos2, and E-value. Then you can convert the format (called ``.raw`` format) to the ``.qa`` format as required.::
+
+    cluster_utils.py --format=raw maize_sorghum.raw maize_sorghum.qa
+
+Then we can do something like::
+
+    quota_align.py --merge --Dm=20 --quota=2:1 maize_sorghum.qa 
+
+``--merge`` asks for chaining, and the distance cutoff ``--Dm=20`` for extending the chain; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, for example, a lineage specific WGD along maize genome).
+
+If I have the BLASTZ anchors, how can I get the chaining and the quota-based screening?
+---------------------------------------------------------------------------------------
+Most often you will have the ``.maf`` file. First convert it to ``.qa`` format.::
+
+    cluster_utils.py --format=maf athaliana_lyrata.maf athaliana_lyrata.qa 
+
+Then you want to do the chaining and the screening in one step.::
+
+    quota_align.py --merge --Dm=20000 --quota=1:1 --Nm=40000 athaliana_lyrata.qa 
+
+``--merge`` asks for chaining, and the distance cutoff ``--Dm=20000`` for extending the chain; ``--quota=1:1`` turns on the quota-based screening (and asks for one-to-one match), and the overlap cutoff ``--Nm=40000``. The reason to specify an overlap cutoff is because the quota-based screening is based on 1D block overlap. Sometimes due to the over-chaining, two blocks will only *slightly* overlap. Therefore the distance ``40000`` is how much *slight* overlap we tolerate.
+
+Finally you can get the screened ``.maf`` file by doing::
+
+    maf_utils athaliana_lyrata.qa athaliana_lyrata.maf
+
+Your final screened ``.maf`` file is called ``athaliana_lyrata.maf.filtered``.
+
+How can I deal with finding the quota-screen paralogous blocks?
+---------------------------------------------------------------
+First we need to figure out how to get the input data. See the last two sections for preparing data from BLAST and BLASTZ. Then we can do something like the following,::
+
+    cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
+    quota_align.py --merge --Dm=20 --self --quota=2:2 grape_grape.qa
+
+The reason for setting up ``--quota=2:2`` is because grape has `pale-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option must be turned on for finding paralogous blocks. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
+
+For a lineage that has tetraploidy event (genome doubling), using the example of brachypodium (which has undergone an ancient tetraploidy), we can do,::
+
+    cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
+    quota_align.py --merge --Dm=20 --self --quota=1:1 grape_grape.qa
+
+Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but we need to ignore the self match. Therefore the rule is when searching paralogous blocks (always do ``--quota=x:x``, where ``x`` is the multiplicity-1).
+
 
 Reference
 ---------

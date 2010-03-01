@@ -2,11 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 """
-Implement a few MIP solvers,
-based on benchmark found on <http://scip.zib.de/>
-SCIP solver is ~16x faster than GLPK solver
-However, I found in rare cases it will segfault. Therefore the default is still
-GLPK solver, please switch to SCIP solver for difficult cases.
+Implement a few MIP solvers, based on benchmark found on <http://scip.zib.de/>
+SCIP solver is ~16x faster than GLPK solver.
+However, I found in rare cases it will segfault. 
+Therefore the default is SCIP, the program will switch to GLPK solver for crashed cases.
 
 The input lp_data is assumed in .lp format, see below
 
@@ -67,7 +66,6 @@ class AbstractMIPSolver(object):
         pass
 
 
-
 class GLPKSolver(AbstractMIPSolver):
     """
     GNU Linear Programming Kit (GLPK) solver, wrapper for calling GLPSOL executable
@@ -109,7 +107,6 @@ class GLPKSolver(AbstractMIPSolver):
         results = [i for i, x in enumerate(results) if x==1]
 
         return results
-
 
 
 class SCIPSolver(AbstractMIPSolver):
