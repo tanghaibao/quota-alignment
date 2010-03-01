@@ -12,8 +12,8 @@ Introduction
 
 Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected coverage (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
 
-.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,75,41,23,96,68,71,34,9|98,60,27,34,56,79,58,74,18,76|84,23,69,81,47,94,60,93,64,54&chm=s,,0,,16|h,FF0000,0,0.755,1|V,FF0000,0,0.76,1&chxt=x,y&chtt=Before+Quota+alignment&chs=300x200 
-.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,41,23,71,34|98,60,34,56,74,18|84,23,81,47,93,64&chm=s,0CBF0B,0,,16&chxt=x,y&chtt=Quota+alignment+1:1&chs=300x200
+.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,75,41,23,96,68,71,34,9|98,60,27,34,56,79,58,74,18,76|84,23,69,81,47,94,60,93,64,54&chm=s,,0,,16|h,FF0000,0,0.755,1|V,FF0000,0,0.76,1&chxt=x,x,y,y&chtt=Before+Quota+alignment&chs=300x200&chxl=1:|Genome+X|3:|Genome+Y&chxp=1,50|3,50& 
+.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,41,23,71,34|98,60,34,56,74,18|84,23,81,47,93,64&chm=s,0CBF0B,0,,16&chxt=x,x,y,y&chtt=Quota+alignment+1:1&chs=300x200&chxl=1:|Genome+X|3:|Genome+Y&chxp=1,50|3,50&
 
 This program tries to screen the clusters based on the coverage constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
