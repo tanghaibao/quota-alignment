@@ -10,7 +10,7 @@ Quota synteny alignment
 Introduction
 ------------
 
-Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: *given the expected coverage (quota) along both x- and y-axis, select a subset of the anchors with maximized total score*.
+Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected coverage (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
 
 This program tries to screen the clusters based on the coverage constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
@@ -48,7 +48,7 @@ Optional dependencies:
     sudo cp scip-1.2.0.linux.x86_64.gnu.opt.clp /usr/local/bin/scip
     sudo chmod +x !$
 
-- ``bx-python`` package, this is only required when user wants to analyze ``.maf`` formatted data::
+- `bx-python <http://bitbucket.org/james_taylor/bx-python/wiki/Home>`_ package, this is only required when user wants to analyze ``.maf`` formatted data::
 
     easy_install bx-python
 
@@ -63,12 +63,13 @@ Usage
     chr1 pos1 chr2 pos2 score
     chr1 pos1 chr2 pos2 score
 
-Each anchor point correspond to a BLAST match. Note that the symbol ``#`` separates each cluster, which contains one or more anchor points. Anchor points within the same cluster **must** be on the same chromosome pair. If you have no idea what cluster each anchor point belongs and don't plan to use chainer, you can specify the format to be ``.raw``.
+Each anchor point correspond to a BLAST match. Note that the symbol ``#`` separates each cluster, which contains one or more anchor points. Anchor points within the same cluster **must** be on the same chromosome pair. If you have no idea what cluster each anchor point belongs and don't plan to use a third-party chainer, you can specify the format to be ``.raw``.
 
-The utility script ``cluster_utils.py`` can be used for converting various formats to the ``.qa`` format, it can also print out the integer sequences (representing block ids) for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print-grimm`` option).
+The utility script ``cluster_utils.py`` can be used for converting various formats to the ``.qa`` format, it can also print out the integer sequences (representing block ids) for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print_grimm`` option).
 
 Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options. 
 
+.. image:: doc/ball1.gif
 
 Cookbook
 --------
@@ -76,7 +77,7 @@ The default package comes with the test data for case 1 and 2 in ``run.sh``. Mor
 
 BLAST anchors chaining and quota-based screening
 ::::::::::::::::::::::::::::::::::::::::::::::::::::
-You need to first figure out a way to convert the BLAST result into the following format::
+First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format)::
 
     1       6       1       4848    1e-12 
     1       7       1       4847    2e-10 
@@ -87,13 +88,13 @@ Where the five columns correspond to chr1, pos1, chr2, pos2, and E-value. Then y
 
     cluster_utils.py --format=raw --log_evalue maize_sorghum.raw maize_sorghum.qa
 
-``--log_evalue`` changes the E-value to ``max(int(-log10(E-value)), 50)`` for score.
+``--log_evalue`` changes the E-value to ``max(int(-log10(E-value)),50)`` for score, so that all the BLAST anchors score in the range 0-50.
 
 Then we can do something like::
 
     quota_align.py --merge --Dm=20 --quota=2:1 maize_sorghum.qa 
 
-``--merge`` asks for chaining, and the distance cutoff ``--Dm=20`` for extending the chain; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, for example, a lineage specific WGD along maize genome).
+``--merge`` asks for chaining, and the distance cutoff ``--Dm=20`` for extending the chain; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region).
 
 BLASTZ anchors chaining and quota-based screening
 :::::::::::::::::::::::::::::::::::::::::::::::::::::

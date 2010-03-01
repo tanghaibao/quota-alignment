@@ -334,10 +334,12 @@ if __name__ == '__main__':
         print_grimm(clusters)
         sys.exit(0)
 
-    write_clusters(fw, clusters)
-
     if options.calc_coverage:
         total_len_x, total_len_y = calc_coverage(clusters)
         print >>sys.stderr, "total length on x-axis:", total_len_x 
         print >>sys.stderr, "total length on y-axis:", total_len_y
+        sys.exit(0)
+
+    write_clusters(fw, clusters)
+
 
