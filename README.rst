@@ -70,6 +70,7 @@ Cookbook
 --------
 The default package comes with the test data for case 1 and 2. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
 
+For finding paralogous blocks, ``--self`` option must be turned on. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately.
 
 Reference
 ---------

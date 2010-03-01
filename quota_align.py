@@ -4,13 +4,12 @@
 """
 This python program does the following:
 1. merge 2D-overlapping blocks 
-2. build conflict graph where edges represent 1D-overlap among blocks
+2. build constraints that represent 1D-overlap among blocks
 3. feed the data into the linear programming solver
 """
 
 import os
 import sys
-import pprint
 import cStringIO
 import itertools
 
@@ -20,15 +19,12 @@ from box_utils import get_1D_overlap, get_2D_overlap
 from lp_solvers import GLPKSolver, SCIPSolver
 
 
-def merge_clusters(chain, clusters):
+def merge_clusters(chain, clusters, Dmax=0):
     """
     Due to the problem of chaining, some chains might overlap each other
     these need to be merged 
     """
-    chain_num = len(chain)
-
     eclusters = make_range(clusters, extend=Dmax)
-    #pprint.pprint(eclusters)
 
     mergeables = get_2D_overlap(chain, eclusters)
 
@@ -44,26 +40,12 @@ def merge_clusters(chain, clusters):
     # maintain the x-sort
     [cluster.sort() for cluster in clusters]
 
-    # check if anything is merged
-    updated = (len(merged_chain) != chain_num)
-    print >>sys.stderr, "merging... (%d->%d)" % (chain_num, len(merged_chain))
+    print >>sys.stderr, "merging... (%d->%d)" % (len(chain), len(merged_chain))
 
-    return merged_chain, updated
+    return merged_chain
 
 
-def recursive_merge_clusters(chain, clusters):
-    """
-    As some rearrangment patterns are recursive, the extension of blocks
-    will take several iterations
-    """
-    while 1: 
-        chain, updated = merge_clusters(chain, clusters)
-        if not updated: break
-
-    return chain, clusters
-
-
-def get_constraints(clusters, quota=(1,1)):
+def get_constraints(clusters, quota=(1,1), Nmax=0):
     """
     Check pairwise cluster comparison, if they overlap then mark edge as conflict
     """
@@ -113,6 +95,7 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
             additions = " + ".join("x%d" % (x+1) for x in c)
             lp_handle.write(" %s <= %d\n" % (additions, qb))
         num_of_constraints += len(constraints_y)
+
     print >>sys.stderr, "number of variables (%d), number of constraints (%d)" % \
             (len(nodes), num_of_constraints)
 
@@ -128,12 +111,13 @@ def format_lp(nodes, constraints_x, qa, constraints_y, qb):
     return lp_data
 
 
-def solve_lp(clusters, quota, work_dir="work", self_match=False, solver="SCIP", verbose=False):
+def solve_lp(clusters, quota, work_dir="work", Nmax=0, 
+        self_match=False, solver="SCIP", verbose=False):
     """
     Solve the formatted LP instance
     """
     qb, qa = quota # flip it
-    nodes, constraints_x, constraints_y = get_constraints(clusters, (qa, qb))
+    nodes, constraints_x, constraints_y = get_constraints(clusters, (qa, qb), Nmax=Nmax)
 
     if self_match:
         constraints_x = constraints_y = constraints_x | constraints_y
@@ -200,7 +184,7 @@ if __name__ == '__main__':
     other_group.add_option("--self", dest="self_match",
             action="store_true", default=False,
             help="you might turn this on when screening paralogous blocks, "\
-                 "especially if you have reduced mirrored blocks into non-redundant set")
+                 "esp. if you have reduced mirrored blocks into non-redundant set")
     other_group.add_option("--solver", dest="solver",
             default="SCIP", choices=supported_solvers,
             help="use MIP solver, must be one of %s " % (supported_solvers,) +\
@@ -233,20 +217,18 @@ if __name__ == '__main__':
             raise Exception, "quota %s too loose, make it <=12 each" % options.quota
         quota = (qa, qb) 
 
-    clusters = read_clusters(qa_file)
+    self_match = options.self_match
+
+    clusters = read_clusters(qa_file, self_match=self_match)
     for cluster in clusters:
         assert len(cluster) > 0
 
-    total_len_x, total_len_y = calc_coverage(clusters, options.self_match)
-
-    Dmax = options.Dmax
-    Nmax = options.Nmax
+    total_len_x, total_len_y = calc_coverage(clusters, self_match=self_match)
 
     # below runs `block merging`
     if options.merge: 
         chain = range(len(clusters))
-        #chain, clusters = recursive_merge_clusters(chain, clusters)
-        chain, updated = merge_clusters(chain, clusters)
+        chain = merge_clusters(chain, clusters, Dmax=options.Dmax)
 
         merged_qa_file = qa_file + ".merged"
         fw = file(merged_qa_file, "w")
@@ -261,7 +243,7 @@ if __name__ == '__main__':
     work_dir = op.join(op.dirname(op.abspath(qa_file)), "work")
 
     clusters = solve_lp(clusters, quota, work_dir=work_dir, \
-            self_match=options.self_match, \
+            Nmax=options.Nmax, self_match=self_match, \
             solver=options.solver, verbose=options.verbose)
 
     filtered_qa_file = qa_file + ".filtered"
@@ -269,8 +251,8 @@ if __name__ == '__main__':
 
     write_clusters(fw, sorted(clusters))
 
-    filtered_len_x, filtered_len_y = calc_coverage(clusters, options.self_match)
-    if options.self_match:
+    filtered_len_x, filtered_len_y = calc_coverage(clusters, self_match)
+    if self_match:
         print >>sys.stderr, "coverage: %.1f%% (self-match)" % \
                 (filtered_len_x*100./total_len_x)
     else:

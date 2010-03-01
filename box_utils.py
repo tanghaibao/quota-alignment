@@ -49,7 +49,7 @@ def get_1D_overlap(eclusters, depth=1):
 
         chr_last = chr
 
-    return list(overlap_set)
+    return overlap_set
 
 
 def get_2D_overlap(chain, eclusters):
