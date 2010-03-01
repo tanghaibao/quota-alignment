@@ -74,8 +74,8 @@ Cookbook
 --------
 The default package comes with the test data for case 1 and 2. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
 
-If I have the BLAST anchors, how can I get the chaining and the quota-based screening?
---------------------------------------------------------------------------------------
+BLAST anchors chaining and the quota-based screening
+::::::::::::::::::::::::::::::::::::::::::::::::::::
 You need to first figure out a way to convert the BLAST result into the following format.::
 
     1       6       1       4848    1e-12 
@@ -93,8 +93,8 @@ Then we can do something like::
 
 ``--merge`` asks for chaining, and the distance cutoff ``--Dm=20`` for extending the chain; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, for example, a lineage specific WGD along maize genome).
 
-If I have the BLASTZ anchors, how can I get the chaining and the quota-based screening?
----------------------------------------------------------------------------------------
+BLASTZ anchors chaining and the quota-based screening
+:::::::::::::::::::::::::::::::::::::::::::::::::::::
 Most often you will have the ``.maf`` file. First convert it to ``.qa`` format.::
 
     cluster_utils.py --format=maf athaliana_lyrata.maf athaliana_lyrata.qa 
@@ -111,8 +111,8 @@ Finally you can get the screened ``.maf`` file by doing::
 
 Your final screened ``.maf`` file is called ``athaliana_lyrata.maf.filtered``.
 
-How can I deal with finding the quota-screen paralogous blocks?
----------------------------------------------------------------
+Find the quota-screened paralogous blocks
+:::::::::::::::::::::::::::::::::::::::
 First we need to figure out how to get the input data. See the last two sections for preparing data from BLAST and BLASTZ. Then we can do something like the following,::
 
     cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
@@ -127,7 +127,35 @@ For a lineage that has tetraploidy event (genome doubling), using the example of
 
 Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but we need to ignore the self match. Therefore the rule is when searching paralogous blocks (always do ``--quota=x:x``, where ``x`` is the multiplicity-1).
 
+Format block order for GRIMM analysis
+:::::::::::::::::::::::::::::::::::::
+This is only supported when ``--quota=1:1``. For example,
+
+    quota_align.py --merge --quota=1:1 athaliana_lyrata.qa
+    cluster_utils.py --print_grimm athaliana_lyrata.qa.filtered
+
+The script will print this::
+
+    >genome X
+    1 2 3 4 5 6 7 8 9 10 11$
+    12 13 14 15 16 17 18 19$
+    20 21 22 23 24 25 26 27 28 29 30 31$
+    32 33 34 35 36$
+    37 38 39 40 41$
+    42 43 44 45 46 47 48 49 50$
+    51 52 53 54 55 56 57 58$
+    59 60 61$
+    62 63$
+    >genome Y
+    -1 2 -3 4 -6 -7 5 8 10 9 11 -14 13 -12 15 16 17 18 -19$
+    37 38 24 -25 26 29 28 -30 -27 31 32 33 -34 35 36$
+    -21 -20 22 23 39 40 41$
+    -50 49 -48 44 46 -45 47 63 -62 -55 -54 53 -52 51$
+    -42 43 56 57 -58 -59 60 -61$
+
+This is the input format for Glenn Tesler's `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ software. You can either run it locally or on their `website <http://nbcr.sdsc.edu/GRIMM/grimm.cgi>`_.
+
 
 Reference
 ---------
-Tang et al. Guided synteny alignment between duplicated genomes.
+Tang et al. Guided synteny alignment between duplicated genomes through integer programming.
