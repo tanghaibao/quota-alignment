@@ -72,7 +72,7 @@ Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options.
 
 Cookbook
 --------
-The default package comes with the test data for case 1 and 2. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``, also change ``TEST`` variable in ``run.sh`` for selecting different test cases.
+The default package comes with the test data for case 1 and 2 in ``run.sh``. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``.
 
 BLAST anchors chaining and the quota-based screening
 ::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -112,7 +112,7 @@ Finally you can get the screened ``.maf`` file by doing::
 Your final screened ``.maf`` file is called ``athaliana_lyrata.maf.filtered``.
 
 Find the quota-screened paralogous blocks
-:::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::
 First we need to figure out how to get the input data. See the last two sections for preparing data from BLAST and BLASTZ. Then we can do something like the following,::
 
     cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
@@ -125,11 +125,11 @@ For a lineage that has tetraploidy event (genome doubling), using the example of
     cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
     quota_align.py --merge --Dm=20 --self --quota=1:1 grape_grape.qa
 
-Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but we need to ignore the self match. Therefore the rule is when searching paralogous blocks (always do ``--quota=x:x``, where ``x`` is the multiplicity-1).
+Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but we need to ignore the self match. Therefore the rule is when searching paralogous blocks (always do ``--quota=x:x``, where ``x`` is the multiplicity minus 1).
 
 Format block order for GRIMM analysis
 :::::::::::::::::::::::::::::::::::::
-This is only supported when ``--quota=1:1``. For example,
+This is only supported when ``--quota=1:1``. For example,::
 
     quota_align.py --merge --quota=1:1 athaliana_lyrata.qa
     cluster_utils.py --print_grimm athaliana_lyrata.qa.filtered
