@@ -295,7 +295,7 @@ if __name__ == '__main__':
                 "[default: no multiplier]")
     output_group.add_option("--log_evalue", dest="log_evalue",
             action="store_true", default=False,
-            help="convert BLAST E-value to min(int(-log10(evalue)), %d) " % MAX_MATCH_SCORE +\
+            help="convert BLAST E-value to min(int(-log10(evalue)),%d) " % MAX_MATCH_SCORE +\
                 "since quota_align only deals with integer scores "\
                 "[default: no multiplier]")
     output_group.add_option("--calc_coverage", dest="calc_coverage",

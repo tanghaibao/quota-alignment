@@ -1,9 +1,5 @@
 *
 !*.py
-!*.c
 !*.sh
 !*.rst
-!makefile
-!.gitignore
 !data/*
-!doc/*
