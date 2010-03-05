@@ -92,7 +92,7 @@ Where the five columns correspond to chr1, pos1, chr2, pos2, and E-value. Then y
 
     cluster_utils.py --format=raw --log_evalue maize_sorghum.raw maize_sorghum.qa
 
-``--log_evalue`` changes the E-value to ``max(int(-log10(E-value)),50)`` for score, so that all the BLAST anchors score in the range 0-50.
+``--log_evalue`` changes the E-value to ``min(int(-log10(E-value)),50)`` for score, so that all the BLAST anchors score in the range 0-50.
 
 Then we can do something like::
 
@@ -125,7 +125,7 @@ First we need to figure out how to get the input data. See the last two sections
     cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
     quota_align.py --merge --Dm=20 --self --quota=2:2 grape_grape.qa
 
-The reason for setting up ``--quota=2:2`` is because grape has `pale-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option must be turned on for finding paralogous blocks. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
+The reason for setting up ``--quota=2:2`` is because grape has `paleo-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option must be turned on for finding paralogous blocks. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
 
 For a lineage that has tetraploidy event (genome doubling), using the example of brachypodium (which has undergone an ancient tetraploidy), we can do::
 
