@@ -165,8 +165,8 @@ if __name__ == '__main__':
                     "(cutoff for `block merging`) "\
                     "[default: %default units (gene or bp dist)] ")
     merge_group.add_option("--min_size", dest="min_size",
-            type="int", default=0,
-            help="keep blocks that contain more than certain number of anchors"\
+            type="int", default=1,
+            help="keep blocks that contain more than certain number of anchors "\
                     "[default: %default anchor points] ")
     parser.add_option_group(merge_group)
 

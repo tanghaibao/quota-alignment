@@ -13,7 +13,7 @@ and new blast is printed to stdout, and a .raw file is created
 
 import sys
 import os.path as op
-sys.path.insert(0, op.dirname(__file__))
+sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
 import collections
 from math import log10
