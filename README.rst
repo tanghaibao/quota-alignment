@@ -88,7 +88,7 @@ First you need to figure out a way to convert the BLAST result into the followin
     1       8       1       4847    0 
     1       9       1       4846    3e-14 
 
-Where the five columns correspond to chr1, pos1, chr2, pos2, and E-value. Then you can convert the format (called ``.raw`` format) to the ``.qa`` format as required::
+Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``, and ``E-value``. Then you can convert the format (called ``.raw`` format) to the ``.qa`` format as required::
 
     cluster_utils.py --format=raw --log_evalue maize_sorghum.raw maize_sorghum.qa
 

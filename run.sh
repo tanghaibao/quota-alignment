@@ -12,7 +12,7 @@ cluster_utils.py --print_grimm data/athaliana_alyrata.qa.filtered
 
 2)
 cluster_utils.py --format=raw --precision=1000 data/maize_sorghum.raw data/maize_sorghum.qa
-quota_align.py --merge --Dm=20 --quota=2:1 data/maize_sorghum.qa
+quota_align.py --merge --Dm=20 --min_size 5 --quota=2:1 data/maize_sorghum.qa
 ;;
 
 3)
