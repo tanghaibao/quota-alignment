@@ -1,7 +1,7 @@
 Quota synteny alignment
 =========================
 
-:Author: Haibao Tang (tanghaibao)
+:Author: Haibao Tang (tanghaibao), Brent Pedersen (brentp)
 :Email: tanghaibao@gmail.com
 :License: BSD
 
@@ -96,7 +96,7 @@ Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``, and
 
 Then we can do something like::
 
-    quota_align.py --merge --Dm=20 --quota=2:1 maize_sorghum.qa 
+    quota_align.py --merge --Dm=20 --min_size=5 --quota=2:1 maize_sorghum.qa 
 
 ``--merge`` asks for chaining, and the distance cutoff ``--Dm=20`` for extending the chain; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region).
 
@@ -123,7 +123,7 @@ Find quota-screened paralogous blocks
 First we need to figure out how to get the input data. See the last two sections for preparing data from BLAST and BLASTZ. Then we can do something like the following::
 
     cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
-    quota_align.py --merge --Dm=20 --self --quota=2:2 grape_grape.qa
+    quota_align.py --merge --Dm=20 --min_size=5 --self --quota=2:2 grape_grape.qa
 
 The reason for setting up ``--quota=2:2`` is because grape has `paleo-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option must be turned on for finding paralogous blocks. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
 
