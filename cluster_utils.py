@@ -71,7 +71,9 @@ def read_maf(maf_file):
     """
     from maf_utils import get_clusters
 
-    return get_clusters(maf_file)
+    clusters = get_clusters(maf_file)
+
+    return clusters
 
 
 def read_raw(filename, log_evalue=False, precision=1):
@@ -85,7 +87,7 @@ def read_raw(filename, log_evalue=False, precision=1):
         if row[0]=="#": continue
         anchor = parse_line(row, log_evalue=log_evalue, precision=precision)
         clusters.append([anchor])
-
+    
     return clusters
 
 
@@ -114,8 +116,6 @@ def read_clusters(filename, log_evalue=False, precision=1, fmt="qa", self_match=
 
     print >>sys.stderr, "read (%d) clusters in '%s'" % \
             (len(clusters), filename)
-
-    clusters.sort()
 
     return clusters
 
@@ -329,6 +329,8 @@ if __name__ == '__main__':
     else:
         clusters = read_clusters(input_file, log_evalue=options.log_evalue,
                 precision=options.precision, fmt=options.fmt)
+
+    clusters.sort()
 
     if options.print_grimm:
         print_grimm(clusters)

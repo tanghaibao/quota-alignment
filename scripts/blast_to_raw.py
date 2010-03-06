@@ -1,14 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
 """
-accepts .bed format: http://genome.ucsc.edu/FAQ/FAQformat.html#format1
+%prog blast_file -q query.bed -s subject.bed
 
-or .flat format: http://github.com/brentp/flatfeature/
-
+accepts .bed format: <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>
+or .flat format: <http://github.com/brentp/flatfeature/>
 and a blast file.
-if the input is query.qbed and subject.qbed,
-files query.localdups and subject.localdups are created containing the parent|offspring dups
-dups inferred by subjects hitting the same query or queries hitting the same subject
 
-and new blast is printed to stdout, and a .raw file is created
+if the input is query.bed and subject.bed, the script files query.localdups and subject.localdups are created containing the parent|offspring dups, as inferred by subjects hitting the same query or queries hitting the same subject
+
+and new blast is printed to stdout, and a .raw file (which is the input for the quota-align pipeline <http://github.com/tanghaibao/quota-alignment/>) is created
 """
 
 import sys
@@ -18,6 +20,19 @@ from grouper import Grouper
 import collections
 from math import log10
 
+# Helper functions in the BLAST filtering to get rid alternative splicings
+def gene_name(st):
+    # this is ugly, but different groups are inconsistent
+    # with how the alternative splicings are named;
+    # mostly it can be done by removing the suffix
+    # except for papaya (evm...) and maize (somewhat complicated)
+    if st.startswith("ev"):
+        return st
+    if st.startswith("Os"):
+        return st.rsplit("-",1)[0]
+    return st.rsplit(".", 1)[0]
+
+
 class BlastLine(object):
     __slots__ = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
                  'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score', \
@@ -25,37 +40,46 @@ class BlastLine(object):
 
     def __init__(self, sline):
         args = sline.split("\t")
-        self.query  =args[0]
-        self.subject  = args[1]
-        self.pctid =float(args[2])
-        self.hitlen =int(args[3])
-        self.nmismatch =int(args[4])
-        self.ngaps =int(args[5])
-        self.qstart =int(args[6])
-        self.qstop =int(args[7])
-        self.sstart =int(args[8])
-        self.sstop =int(args[9])
-        self.evalue =float(args[10])
-        self.score =float(args[11])
+        self.query = args[0]
+        self.subject = args[1]
+        self.pctid = float(args[2])
+        self.hitlen = int(args[3])
+        self.nmismatch = int(args[4])
+        self.ngaps = int(args[5])
+        self.qstart = int(args[6])
+        self.qstop = int(args[7])
+        self.sstart = int(args[8])
+        self.sstop = int(args[9])
+        self.evalue = float(args[10])
+        self.score = float(args[11])
 
     def __repr__(self):
-        return "BLine('%s' to '%s', eval=%.3f, score=%.1f)" % (self.query, self.subject, self.evalue, self.score)
+        return "BLine('%s' to '%s', eval=%.3f, score=%.1f)" % \
+                (self.query, self.subject, self.evalue, self.score)
 
+    def __str__(self):
+        return "\t".join(map(str, (getattr(self, attr) \
+                for attr in BlastLine.__slots__)))
 
-    def to_blast_line(self):
-        return "\t".join(map(str, (getattr(self, attr) for attr in BlastLine.__slots__)))
 
 class BedRow(object):
-    __slots__ = ('seqid', 'start', 'end', 'name', 'stuff')
-    def __init__(self, seqid, start, end, name, stuff):
-       self.seqid = seqid
+    __slots__ = ('seqid', 'start', 'end', 'accn', 'stuff')
+    def __init__(self, seqid, start, end, accn, stuff):
+       self.seqid = seqid 
        self.start = int(start)
        self.end = int(end)
-       self.name = name
+       self.accn = accn 
        self.stuff = stuff
 
-    def to_bed_line(self):
-        return "\t".join(map(str, [self.seqid, self.start, self.end, self.name] + self.stuff))
+    def __str__(self):
+        to_write = [self.seqid, self.start, self.end, self.accn]
+        if self.stuff:
+            to_write.extend(self.stuff)
+        return "\t".join(map(str, to_write)) 
+
+    def __getitem__(self, key): 
+        return getattr(self, key)
+
 
 class Bed(list):
     
@@ -64,49 +88,56 @@ class Bed(list):
         beds = []
         for line in open(filename):
             if line[0] == "#": continue
-            if line.startwith('track'): continue
-            line = line.split("\t")
+            if line.startswith('track'): continue
+            line = line.strip().split("\t")
             chr, start, end, name = line[:4]
+            start, end = int(start), int(end)
             br = BedRow(chr, start, end, name, line[4:])
             beds.append(br)
         self.seqids = sorted(set(b.seqid for b in beds))
-        self.beds = sorted(beds, key=lambda a: (a.chr, a.start)) 
+        self.beds = sorted(beds, key=lambda a: (a.seqid, a.start)) 
 
     def __getitem__(self, i):
         return self.beds[i]
+
     def __len__(self):
         return len(self.beds)
 
+    def __iter__(self):
+        for b in self.beds:
+            yield b
 
-def main(qbed_file, sbed_file, blast_file):
-    if qbed_file.endswith(".flat"):
+
+def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
+
+    print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
+    if is_flat_fmt:
         from flatfeature import Flat
         qbed = Flat(qbed_file)
         sbed = Flat(sbed_file)
-        qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed))
-        sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed))
     else:
         qbed = Bed(qbed_file)
         sbed = Bed(sbed_file)
-        qorder = dict((f.name, (i, f)) for (i, f) in enumerate(qbed))
-        sorder = dict((f.name, (i, f)) for (i, f) in enumerate(sbed))
 
+    qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed))
+    sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed))
 
-    seen = {}
+    print >>sys.stderr, "read BLAST file %s" % blast_file
+    seen = set() 
     blasts = sorted([BlastLine(line) for line in open(blast_file)], 
-                    key=lambda b: b.evalue)
+                    key=lambda b: b.score, reverse=True)
+
     filtered_blasts = []
     for b in blasts:
-        qi, q = qorder[b.query]
-        si, s = sorder[b.subject]
+        query, subject = gene_name(b.query), gene_name(b.subject)
+        if query not in qorder or subject not in sorder: continue
+        qi, q = qorder[query]
+        si, s = sorder[subject]
         if (qi, si) in seen: continue
-        seen[qi, si] = 1
+        seen.add((qi, si))
         b.qi = qi
         b.si = si
-        if qbed_file.endswith(".flat"):
-            b.qseqid, b.sseqid = q['seqid'], s['seqid']
-        else:
-            b.qseqid, b.sseqid = q.seqid, s.seqid
+        b.qseqid, b.sseqid = q['seqid'], s['seqid']
         filtered_blasts.append(b)
 
     qmothers = {}
@@ -121,54 +152,59 @@ def main(qbed_file, sbed_file, blast_file):
     smothers = {}
     schildren = set()
     sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
-    for accns in sorted(tandem_grouper(qbed, sbed, filtered_blasts, flip=False)):
+    for accns in sorted(tandem_grouper(qbed, sbed, filtered_blasts, flip=False, Nmax=Nmax)):
         print >>sdups_fh, "|".join(accns)
         for dup in accns[1:]:
             smothers[dup] = accns[0]
         schildren.update(accns[1:])
 
+    print >>sys.stderr, "write local dups to files %s and %s" % \
+            (qdups_fh.name, sdups_fh.name)
 
+    # generate filtered annotation files
     for bed, children in [(qbed, qchildren), (sbed, schildren)]:
         out_name = "%s.filtered%s" % op.splitext(bed.filename)
         fh = open(out_name, "w")
         for i, row in enumerate(bed):
-            if bed.filename.endswith(".flat"):
+            if row['accn'] in children: continue
+            if is_flat_fmt:
                 if i == 0: print >>fh, "\t".join(Flat.names)
-                if row['accn'] in children: continue
                 print >>fh, Flat.row_string(row)
             else:
-                if row.name in children: continue
-                print >>fh, row.to_bed_line()
+                print >>fh, row
         fh.close()
-    write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, blast_file)
+
+    write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, 
+            blast_file, is_flat_fmt)
 
 
-def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, blast_file):
-    qnew_name = "%s.filtered%s" % op.splitext(qbed.filename)
-    snew_name = "%s.filtered%s" % op.splitext(sbed.filename)
+def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, 
+        blast_file, is_flat_fmt):
+    qnew_name = op.basename("%s.filtered%s" % op.splitext(qbed.filename))
+    snew_name = op.basename("%s.filtered%s" % op.splitext(sbed.filename))
 
-    raw_name = "%s.filtered.raw" % op.splitext(blast_file)[0]
+    raw_name = op.basename("%s.filtered.raw" % op.splitext(blast_file)[0])
     raw_fh = open(raw_name, "w")
-    if qbed.filename.endswith(".flat"):
+
+    if is_flat_fmt:
         from flatfeature import Flat
         qbed_new = Flat(qnew_name)
         sbed_new = Flat(snew_name)
-        qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed_new))
-        sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
     else:
         qbed_new = Bed(qnew_name)
         sbed_new = Bed(snew_name)
-        qorder = dict((f.name, (i, f)) for (i, f) in enumerate(qbed_new))
-        sorder = dict((f.name, (i, f)) for (i, f) in enumerate(sbed_new))
 
+    qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed_new))
+    sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
+
+    print >>sys.stderr, "write raw file %s" % raw_fh.name
     for b in filter_to_mothers_and_write_blast(filtered_blasts, qmothers, smothers):
-        # write raw file.
-        qi, q = qorder[b.query]
-        si, s = sorder[b.subject]
-        if qbed.filename.endswith(".flat"):
-            qseqid, sseqid = q['seqid'], s['seqid']
-        else:
-            qseqid, sseqid = q.seqid, s.seqid
+        query, subject = gene_name(b.query), gene_name(b.subject)
+        if query not in qorder or subject not in sorder: continue
+        qi, q = qorder[query]
+        si, s = sorder[subject]
+        qseqid, sseqid = q['seqid'], s['seqid']
+
         score = 50 if b.evalue == 0 else min(int(-log10(b.evalue)), 50)
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
@@ -187,21 +223,21 @@ def filter_to_mothers_and_write_blast(blast_list, qmothers, smothers):
         key = b.query, b.subject
         if key in seen: continue
         seen[key] = True
-        print b.to_blast_line()
+        print b
         yield b
 
 
-#    for accns in sorted(tandem_grouper(sbed, qbed, filtered_blasts, flip=True)):
-def tandem_grouper(abed, bbed, blast_list, Tandem_Nmax=10, flip=False):
+# for accns in sorted(tandem_grouper(sbed, qbed, filtered_blasts, flip=True)):
+def tandem_grouper(abed, bbed, blast_list, Nmax=10, flip=False):
     for seqid in abed.seqids:
         ai_to_bi = collections.defaultdict(list)
         for b in blast_list:
-                if flip:
-                    if b.qseqid == seqid:
-                        ai_to_bi[b.si].append(b.qi)
-                else:
-                    if b.sseqid == seqid:
-                        ai_to_bi[b.qi].append(b.si)
+            if flip:
+                if b.qseqid == seqid:
+                    ai_to_bi[b.si].append(b.qi)
+            else:
+                if b.sseqid == seqid:
+                    ai_to_bi[b.qi].append(b.si)
 
         standems = Grouper()
         for qi in ai_to_bi:
@@ -209,7 +245,7 @@ def tandem_grouper(abed, bbed, blast_list, Tandem_Nmax=10, flip=False):
             for ia, a in enumerate(ordered[:-1]):
                 for b in ordered[ia + 1:]:
                     assert b > a, (b, a)
-                    if b - a > Tandem_Nmax: break
+                    if b - a > Nmax: break
                     standems.join(a, b)
 
         for group in standems:
@@ -222,12 +258,21 @@ if __name__ == "__main__":
     import optparse
 
     parser = optparse.OptionParser(__doc__)
-    parser.add_option("-q", dest="qbed", help="path to qbed or qflat")
-    parser.add_option("-s", dest="sbed", help="path to sbed or sflat")
+    parser.add_option("--qbed", dest="qbed", 
+            help="path to qbed or qflat")
+    parser.add_option("--sbed", dest="sbed", 
+            help="path to sbed or sflat")
+    parser.add_option("--Nmax", dest="Nmax", type="int", default=10, 
+            help="merge tandem genes within distance "\
+                 "[default: %default genes]")
 
     (options, blast_files) = parser.parse_args()
 
     if not (len(blast_files) == 1 and options.qbed and options.sbed):
         sys.exit(parser.print_help())
 
-    main(options.qbed, options.sbed, blast_files[0])
+    is_flat_fmt = options.qbed.endswith(".flat")
+
+    main(options.qbed, options.sbed, blast_files[0], Nmax=options.Nmax,
+            is_flat_fmt=is_flat_fmt)
+
