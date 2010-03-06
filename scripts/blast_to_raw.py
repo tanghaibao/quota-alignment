@@ -69,6 +69,7 @@ class Bed(list):
             chr, start, end, name = line[:4]
             br = BedRow(chr, start, end, name, line[4:])
             beds.append(br)
+        self.seqids = sorted(set(b.seqid for b in beds))
         self.beds = sorted(beds, key=lambda a: (a.chr, a.start)) 
 
     def __getitem__(self, i):
@@ -152,13 +153,13 @@ def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, blast_file)
         from flatfeature import Flat
         qbed_new = Flat(qnew_name)
         sbed_new = Flat(snew_name)
-        qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed))
-        sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed))
+        qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed_new))
+        sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
     else:
         qbed_new = Bed(qnew_name)
         sbed_new = Bed(snew_name)
-        qorder = dict((f.name, (i, f)) for (i, f) in enumerate(qbed))
-        sorder = dict((f.name, (i, f)) for (i, f) in enumerate(sbed))
+        qorder = dict((f.name, (i, f)) for (i, f) in enumerate(qbed_new))
+        sorder = dict((f.name, (i, f)) for (i, f) in enumerate(sbed_new))
 
     for b in filter_to_mothers_and_write_blast(filtered_blasts, qmothers, smothers):
         # write raw file.
@@ -190,15 +191,17 @@ def filter_to_mothers_and_write_blast(blast_list, qmothers, smothers):
         yield b
 
 
+#    for accns in sorted(tandem_grouper(sbed, qbed, filtered_blasts, flip=True)):
 def tandem_grouper(abed, bbed, blast_list, Tandem_Nmax=10, flip=False):
     for seqid in abed.seqids:
         ai_to_bi = collections.defaultdict(list)
         for b in blast_list:
-            if b.qseqid == seqid:
                 if flip:
-                    ai_to_bi[b.si].append(b.qi)
+                    if b.qseqid == seqid:
+                        ai_to_bi[b.si].append(b.qi)
                 else:
-                    ai_to_bi[b.qi].append(b.si)
+                    if b.sseqid == seqid:
+                        ai_to_bi[b.qi].append(b.si)
 
         standems = Grouper()
         for qi in ai_to_bi:
