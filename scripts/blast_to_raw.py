@@ -141,29 +141,25 @@ def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
     print >>sys.stderr, "write local dups to files %s and %s" % \
             (qdups_fh.name, sdups_fh.name)
 
-    qmothers = {}
-    qchildren = set()
+    qdups_to_mother = {}
     for accns in sorted(tandem_grouper(qbed, filtered_blasts, 
                                         flip=True, Nmax=Nmax)):
         print >>qdups_fh, "|".join(accns)
         for dup in accns[1:]:
-            qmothers[dup] = accns[0]
-        qchildren.update(accns[1:])
+            qdups_to_mother[dup] = accns[0]
 
-    smothers = {}
-    schildren = set()
+    sdups_to_mother = {}
     for accns in sorted(tandem_grouper(sbed, filtered_blasts, 
                                         flip=False, Nmax=Nmax)):
         print >>sdups_fh, "|".join(accns)
         for dup in accns[1:]:
-            smothers[dup] = accns[0]
-        schildren.update(accns[1:])
+            sdups_to_mother[dup] = accns[0]
 
     qdups_fh.close()
     sdups_fh.close()
 
     # generate filtered annotation files
-    for bed, children in [(qbed, qchildren), (sbed, schildren)]:
+    for bed, children in [(qbed, qdups_to_mother), (sbed, sdups_to_mother)]:
         out_name = "%s.filtered%s" % op.splitext(bed.filename)
         print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
         fh = open(out_name, "w")
@@ -176,11 +172,11 @@ def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
                 print >>fh, row
         fh.close()
 
-    write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, 
+    write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mother, 
             blast_file, is_flat_fmt)
 
 
-def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, 
+def write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mother, 
         blast_file, is_flat_fmt):
     qnew_name = "%s.filtered%s" % op.splitext(qbed.filename)
     snew_name = "%s.filtered%s" % op.splitext(sbed.filename)
@@ -200,7 +196,7 @@ def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers,
     sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
 
     print >>sys.stderr, "write raw file %s" % raw_fh.name
-    for b in filter_to_mothers(filtered_blasts, qmothers, smothers):
+    for b in filter_to_dups_to_mother(filtered_blasts, qdups_to_mother, sdups_to_mother):
         qi, q = qorder[b.query]
         si, s = sorder[b.subject]
         qseqid, sseqid = q['seqid'], s['seqid']
@@ -209,12 +205,12 @@ def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers,
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
 
-def filter_to_mothers(blast_list, qmothers, smothers):
+def filter_to_dups_to_mother(blast_list, qdups_to_mother, sdups_to_mother):
     
     mother_blast = []
     for b in blast_list:
-        if b.query in qmothers: b.query = qmothers[b.query]
-        if b.subject in smothers: b.subject = smothers[b.subject]
+        if b.query in qdups_to_mother: b.query = qdups_to_mother[b.query]
+        if b.subject in sdups_to_mother: b.subject = sdups_to_mother[b.subject]
         mother_blast.append(b)
     
     mother_blast.sort(key=lambda b: b.score, reverse=True)
