@@ -196,7 +196,7 @@ def write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mothe
     sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
 
     print >>sys.stderr, "write raw file %s" % raw_fh.name
-    for b in filter_to_dups_to_mother(filtered_blasts, qdups_to_mother, sdups_to_mother):
+    for b in filter_to_mother(filtered_blasts, qdups_to_mother, sdups_to_mother):
         qi, q = qorder[b.query]
         si, s = sorder[b.subject]
         qseqid, sseqid = q['seqid'], s['seqid']
@@ -205,7 +205,7 @@ def write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mothe
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
 
-def filter_to_dups_to_mother(blast_list, qdups_to_mother, sdups_to_mother):
+def filter_to_mother(blast_list, qdups_to_mother, sdups_to_mother):
     
     mother_blast = []
     for b in blast_list:
