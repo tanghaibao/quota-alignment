@@ -182,10 +182,10 @@ def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
 
 def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers, 
         blast_file, is_flat_fmt):
-    qnew_name = op.basename("%s.filtered%s" % op.splitext(qbed.filename))
-    snew_name = op.basename("%s.filtered%s" % op.splitext(sbed.filename))
+    qnew_name = "%s.filtered%s" % op.splitext(qbed.filename)
+    snew_name = "%s.filtered%s" % op.splitext(sbed.filename)
 
-    raw_name = op.basename("%s.filtered.raw" % op.splitext(blast_file)[0])
+    raw_name = "%s.filtered.raw" % op.splitext(blast_file)[0]
     raw_fh = open(raw_name, "w")
 
     if is_flat_fmt:
@@ -236,11 +236,12 @@ def tandem_grouper(bed, blast_list, Nmax=10, flip=True):
 
     standems = Grouper()
     for name, hits in itertools.groupby(simple_blast, key=lambda x:x[0]):
-        hits = sorted(x[1] for x in hits)
+        # these are already sorted.
+        hits = [x[1] for x in hits]
         for ia, a in enumerate(hits[:-1]):
             b = hits[ia + 1]
             # on the same chromosome and rank difference no larger than Nmax
-            if b[1]-a[1] <= Nmax and b[0]==a[0]: 
+            if b[1] - a[1] <= Nmax and b[0] == a[0]: 
                 standems.join(a[1], b[1])
 
     for group in standems:
