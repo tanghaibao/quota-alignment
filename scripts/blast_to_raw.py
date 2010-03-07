@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-%prog blast_file -q query.bed -s subject.bed
+%prog blast_file --qbed query.bed --sbed subject.bed
 
 accepts .bed format: <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>
 or .flat format: <http://github.com/brentp/flatfeature/>

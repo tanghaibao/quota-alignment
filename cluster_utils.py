@@ -40,7 +40,7 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
     return max_match if matchScore > max_match else matchScore
 
 
-def parse_line(row, log_evalue=False, precision=1, fmt="qa", self_match=False):
+def parse_line(row, log_evalue=False, scale=1, fmt="qa", self_match=False):
     """
     Return anchor point info from an input line (.qa, .raw format)
     """
@@ -54,7 +54,7 @@ def parse_line(row, log_evalue=False, precision=1, fmt="qa", self_match=False):
     
     if log_evalue:
         score = int(scoringF(float(evalue)))
-    score = int(float(score) * precision) 
+    score = int(float(score) * scale) 
     
     a, b = int(a), int(b)
     gene1, gene2 = (ca, a), (cb, b)
@@ -76,7 +76,7 @@ def read_maf(maf_file):
     return clusters
 
 
-def read_raw(filename, log_evalue=False, precision=1):
+def read_raw(filename, log_evalue=False, scale=1):
     """
     Read cluster info from raw anchor point lists
     """
@@ -85,13 +85,13 @@ def read_raw(filename, log_evalue=False, precision=1):
 
     for row in fp:
         if row[0]=="#": continue
-        anchor = parse_line(row, log_evalue=log_evalue, precision=precision)
+        anchor = parse_line(row, log_evalue=log_evalue, scale=scale)
         clusters.append([anchor])
     
     return clusters
 
 
-def read_clusters(filename, log_evalue=False, precision=1, fmt="qa", self_match=False):
+def read_clusters(filename, log_evalue=False, scale=1, fmt="qa", self_match=False):
     """
     Read cluster info from .qa and .dag file
     """
@@ -106,7 +106,7 @@ def read_clusters(filename, log_evalue=False, precision=1, fmt="qa", self_match=
         cluster = []
         while row and row[0] != "#":
             if row.strip()== "": break
-            anchor = parse_line(row, log_evalue=log_evalue, precision=precision, 
+            anchor = parse_line(row, log_evalue=log_evalue, scale=scale, 
                     fmt=fmt, self_match=self_match)
             cluster.append(anchor)
             row = fp.readline()
@@ -288,16 +288,15 @@ if __name__ == '__main__':
     parser.add_option_group(input_group)
 
     output_group = OptionGroup(parser, "Output options")
-    output_group.add_option("--precision", dest="precision",
+    output_group.add_option("--scale", dest="scale",
             action="store", type="float", default=1,
-            help="convert float scores into int(score*precision) " \
+            help="convert float scores into int(score*scale) " \
                 "since quota_align only deals with integer scores "\
                 "[default: no multiplier]")
     output_group.add_option("--log_evalue", dest="log_evalue",
             action="store_true", default=False,
-            help="convert BLAST E-value to min(int(-log10(evalue)),%d) " % MAX_MATCH_SCORE +\
-                "since quota_align only deals with integer scores "\
-                "[default: no multiplier]")
+            help="convert BLAST E-value to min(int(-log10(evalue)),%d) " % MAX_MATCH_SCORE + \
+                "[default: %default]")
     output_group.add_option("--calc_coverage", dest="calc_coverage",
             action="store_true", default=False,
             help="print the total length the clusters occupy "\
@@ -325,10 +324,10 @@ if __name__ == '__main__':
         clusters = read_maf(input_file)
     elif options.fmt=="raw":
         clusters = read_raw(input_file, log_evalue=options.log_evalue, 
-                precision=options.precision)
+                scale=options.scale)
     else:
         clusters = read_clusters(input_file, log_evalue=options.log_evalue,
-                precision=options.precision, fmt=options.fmt)
+                scale=options.scale, fmt=options.fmt)
 
     clusters.sort()
 
