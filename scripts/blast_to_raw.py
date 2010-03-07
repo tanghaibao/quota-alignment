@@ -8,21 +8,24 @@ accepts .bed format: <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>
 or .flat format: <http://github.com/brentp/flatfeature/>
 and a blast file.
 
-if the input is query.bed and subject.bed, the script files query.localdups and subject.localdups are created containing the parent|offspring dups, as inferred by subjects hitting the same query or queries hitting the same subject
+if the input is query.bed and subject.bed, the script files query.localdups and subject.localdups are created containing the parent|offspring dups, as inferred by subjects hitting the same query or queries hitting the same subject.
 
-and new blast is printed to stdout, and a .raw file (which is the input for the quota-align pipeline <http://github.com/tanghaibao/quota-alignment/>) is created
+A .raw file (which is the input for the quota-align pipeline <http://github.com/tanghaibao/quota-alignment/>) is created
 """
 
 import sys
 import os.path as op
+import collections
+import itertools
+
+from math import log10
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
-import collections
-from math import log10
 
-# Helper functions in the BLAST filtering to get rid alternative splicings
+
+# helper functions in the BLAST filtering to get rid alternative splicings
 def gene_name(st):
-    # this is ugly, but different groups are inconsistent
+    # this is ugly, but different annotation groups are inconsistent
     # with how the alternative splicings are named;
     # mostly it can be done by removing the suffix
     # except for papaya (evm...) and maize (somewhat complicated)
@@ -34,48 +37,37 @@ def gene_name(st):
 
 
 class BlastLine(object):
-    __slots__ = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
-                 'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score', \
-                 'qseqid', 'sseqid', 'qi', 'si')
+    __slots__ = ("query", "subject", "evalue", "score", "qseqid", "sseqid", "qi", "si")
 
     def __init__(self, sline):
         args = sline.split("\t")
         self.query = args[0]
         self.subject = args[1]
-        self.pctid = float(args[2])
-        self.hitlen = int(args[3])
-        self.nmismatch = int(args[4])
-        self.ngaps = int(args[5])
-        self.qstart = int(args[6])
-        self.qstop = int(args[7])
-        self.sstart = int(args[8])
-        self.sstop = int(args[9])
         self.evalue = float(args[10])
         self.score = float(args[11])
 
     def __repr__(self):
-        return "BLine('%s' to '%s', eval=%.3f, score=%.1f)" % \
+        return "BlastLine('%s' to '%s', eval=%.3f, score=%.1f)" % \
                 (self.query, self.subject, self.evalue, self.score)
 
     def __str__(self):
-        return "\t".join(map(str, (getattr(self, attr) \
-                for attr in BlastLine.__slots__)))
+        return "\t".join(map(str, [getattr(self, attr) \
+                for attr in BlastLine.__slots__]))
 
 
-class BedRow(object):
-    __slots__ = ('seqid', 'start', 'end', 'accn', 'stuff')
-    def __init__(self, seqid, start, end, accn, stuff):
-       self.seqid = seqid 
-       self.start = int(start)
-       self.end = int(end)
-       self.accn = accn 
-       self.stuff = stuff
+class BedLine(object):
+    __slots__ = ("seqid", "start", "end", "accn")
+
+    def __init__(self, sline): 
+        args = sline.strip().split("\t")
+        self.seqid = args[0] 
+        self.start = int(args[1])
+        self.end = int(args[2])
+        self.accn = args[3] 
 
     def __str__(self):
-        to_write = [self.seqid, self.start, self.end, self.accn]
-        if self.stuff:
-            to_write.extend(self.stuff)
-        return "\t".join(map(str, to_write)) 
+        return "\t".join(map(str, [getattr(self, attr) \
+                for attr in BedLine.__slots__]))
 
     def __getitem__(self, key): 
         return getattr(self, key)
@@ -89,11 +81,8 @@ class Bed(list):
         for line in open(filename):
             if line[0] == "#": continue
             if line.startswith('track'): continue
-            line = line.strip().split("\t")
-            chr, start, end, name = line[:4]
-            start, end = int(start), int(end)
-            br = BedRow(chr, start, end, name, line[4:])
-            beds.append(br)
+            beds.append(BedLine(line))
+
         self.seqids = sorted(set(b.seqid for b in beds))
         self.beds = sorted(beds, key=lambda a: (a.seqid, a.start)) 
 
@@ -122,28 +111,40 @@ def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
     qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed))
     sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed))
 
-    print >>sys.stderr, "read BLAST file %s" % blast_file
-    seen = set() 
-    blasts = sorted([BlastLine(line) for line in open(blast_file)], 
-                    key=lambda b: b.score, reverse=True)
+    fp = file(blast_file)
+    print >>sys.stderr, "read BLAST file %s (total %d lines)" % \
+            (blast_file, sum(1 for line in fp))
+    fp.seek(0)
+    blasts = sorted([BlastLine(line) for line in fp], \
+            key=lambda b: b.score, reverse=True)
 
     filtered_blasts = []
+    seen = set() 
     for b in blasts:
+        # deal with alternative splicings
         query, subject = gene_name(b.query), gene_name(b.subject)
         if query not in qorder or subject not in sorder: continue
+        key = query, subject
+        if key in seen: continue
+        seen.add(key)
+        b.query, b.subject = key
+
         qi, q = qorder[query]
         si, s = sorder[subject]
-        if (qi, si) in seen: continue
-        seen.add((qi, si))
-        b.qi = qi
-        b.si = si
+        b.qi, b.si = qi, si
         b.qseqid, b.sseqid = q['seqid'], s['seqid']
+        
         filtered_blasts.append(b)
+
+    qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
+    sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
+    print >>sys.stderr, "write local dups to files %s and %s" % \
+            (qdups_fh.name, sdups_fh.name)
 
     qmothers = {}
     qchildren = set()
-    qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
-    for accns in sorted(tandem_grouper(sbed, qbed, filtered_blasts, flip=True)):
+    for accns in sorted(tandem_grouper(qbed, filtered_blasts, 
+                                        flip=True, Nmax=Nmax)):
         print >>qdups_fh, "|".join(accns)
         for dup in accns[1:]:
             qmothers[dup] = accns[0]
@@ -151,19 +152,20 @@ def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
 
     smothers = {}
     schildren = set()
-    sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
-    for accns in sorted(tandem_grouper(qbed, sbed, filtered_blasts, flip=False, Nmax=Nmax)):
+    for accns in sorted(tandem_grouper(sbed, filtered_blasts, 
+                                        flip=False, Nmax=Nmax)):
         print >>sdups_fh, "|".join(accns)
         for dup in accns[1:]:
             smothers[dup] = accns[0]
         schildren.update(accns[1:])
 
-    print >>sys.stderr, "write local dups to files %s and %s" % \
-            (qdups_fh.name, sdups_fh.name)
+    qdups_fh.close()
+    sdups_fh.close()
 
     # generate filtered annotation files
     for bed, children in [(qbed, qchildren), (sbed, schildren)]:
         out_name = "%s.filtered%s" % op.splitext(bed.filename)
+        print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
         fh = open(out_name, "w")
         for i, row in enumerate(bed):
             if row['accn'] in children: continue
@@ -198,18 +200,16 @@ def write_new_files(qbed, sbed, filtered_blasts, qmothers, smothers,
     sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
 
     print >>sys.stderr, "write raw file %s" % raw_fh.name
-    for b in filter_to_mothers_and_write_blast(filtered_blasts, qmothers, smothers):
-        query, subject = gene_name(b.query), gene_name(b.subject)
-        if query not in qorder or subject not in sorder: continue
-        qi, q = qorder[query]
-        si, s = sorder[subject]
+    for b in filter_to_mothers(filtered_blasts, qmothers, smothers):
+        qi, q = qorder[b.query]
+        si, s = sorder[b.subject]
         qseqid, sseqid = q['seqid'], s['seqid']
 
         score = 50 if b.evalue == 0 else min(int(-log10(b.evalue)), 50)
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
 
-def filter_to_mothers_and_write_blast(blast_list, qmothers, smothers):
+def filter_to_mothers(blast_list, qmothers, smothers):
     
     mother_blast = []
     for b in blast_list:
@@ -217,41 +217,37 @@ def filter_to_mothers_and_write_blast(blast_list, qmothers, smothers):
         if b.subject in smothers: b.subject = smothers[b.subject]
         mother_blast.append(b)
     
-    mother_blast.sort(key=lambda b: b.evalue)
-    seen = {}
+    mother_blast.sort(key=lambda b: b.score, reverse=True)
+    seen = set() 
     for b in mother_blast:
         key = b.query, b.subject
         if key in seen: continue
-        seen[key] = True
-        print b
+        seen.add(key)
         yield b
 
 
-# for accns in sorted(tandem_grouper(sbed, qbed, filtered_blasts, flip=True)):
-def tandem_grouper(abed, bbed, blast_list, Nmax=10, flip=False):
-    for seqid in abed.seqids:
-        ai_to_bi = collections.defaultdict(list)
-        for b in blast_list:
-            if flip:
-                if b.qseqid == seqid:
-                    ai_to_bi[b.si].append(b.qi)
-            else:
-                if b.sseqid == seqid:
-                    ai_to_bi[b.qi].append(b.si)
+def tandem_grouper(bed, blast_list, Nmax=10, flip=True):
+    if not flip:
+        simple_blast = [(b.query, (b.sseqid, b.si)) for b in blast_list] 
+    else:
+        simple_blast = [(b.subject, (b.qseqid, b.qi)) for b in blast_list] 
 
-        standems = Grouper()
-        for qi in ai_to_bi:
-            ordered = sorted(ai_to_bi[qi])
-            for ia, a in enumerate(ordered[:-1]):
-                for b in ordered[ia + 1:]:
-                    assert b > a, (b, a)
-                    if b - a > Nmax: break
-                    standems.join(a, b)
+    simple_blast.sort()
 
-        for group in standems:
-            rows = [bbed[i] for i in group]
-            rows.sort(key=lambda a: (a['end'] - a['start']), reverse=True)
-            yield [row['accn'] for row in rows]
+    standems = Grouper()
+    for name, hits in itertools.groupby(simple_blast, key=lambda x:x[0]):
+        hits = sorted(x[1] for x in hits)
+        for ia, a in enumerate(hits[:-1]):
+            b = hits[ia + 1]
+            # on the same chromosome and rank difference no larger than Nmax
+            if b[1]-a[1] <= Nmax and b[0]==a[0]: 
+                standems.join(a[1], b[1])
+
+    for group in standems:
+        rows = [bed[i] for i in group]
+        # within the tandem groups, genes are sorted with decreasing size
+        rows.sort(key=lambda a: abs(a['end'] - a['start']), reverse=True)
+        yield [row['accn'] for row in rows]
 
 
 if __name__ == "__main__":
