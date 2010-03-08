@@ -97,7 +97,14 @@ class Bed(list):
             yield b
 
 
-def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
+def main(blast_file, options):
+
+    is_flat_fmt = options.qbed.endswith(".flat")
+    qbed_file, sbed_file = options.qbed, options.sbed
+    
+    tandem_Nmax = options.tandem_Nmax
+    top_N = options.top_N
+    cscore = options.cscore
 
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
     if is_flat_fmt:
@@ -136,67 +143,87 @@ def main(qbed_file, sbed_file, blast_file, Nmax=10, is_flat_fmt=True):
         
         filtered_blasts.append(b)
 
-    qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
-    sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
-    print >>sys.stderr, "write local dups to files %s and %s" % \
-            (qdups_fh.name, sdups_fh.name)
-
-    qdups_to_mother = {}
-    for accns in sorted(tandem_grouper(qbed, filtered_blasts, 
-                                        flip=True, Nmax=Nmax)):
-        print >>qdups_fh, "|".join(accns)
-        for dup in accns[1:]:
-            qdups_to_mother[dup] = accns[0]
-
-    sdups_to_mother = {}
-    for accns in sorted(tandem_grouper(sbed, filtered_blasts, 
-                                        flip=False, Nmax=Nmax)):
-        print >>sdups_fh, "|".join(accns)
-        for dup in accns[1:]:
-            sdups_to_mother[dup] = accns[0]
-
-    qdups_fh.close()
-    sdups_fh.close()
-
-    # generate filtered annotation files
-    for bed, children in [(qbed, qdups_to_mother), (sbed, sdups_to_mother)]:
-        out_name = "%s.filtered%s" % op.splitext(bed.filename)
-        print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
-        fh = open(out_name, "w")
-        for i, row in enumerate(bed):
-            if row['accn'] in children: continue
-            if is_flat_fmt:
-                if i == 0: print >>fh, "\t".join(Flat.names)
-                print >>fh, Flat.row_string(row)
-            else:
-                print >>fh, row
-        fh.close()
-
-    write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mother, 
-            blast_file, is_flat_fmt)
-
-
-def write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mother, 
-        blast_file, is_flat_fmt):
-    qnew_name = "%s.filtered%s" % op.splitext(qbed.filename)
-    snew_name = "%s.filtered%s" % op.splitext(sbed.filename)
-
+    # this is the final output we will write to after three optional BLAST filters below
     raw_name = "%s.filtered.raw" % op.splitext(blast_file)[0]
     raw_fh = open(raw_name, "w")
 
-    if is_flat_fmt:
-        from flatfeature import Flat
-        qbed_new = Flat(qnew_name)
-        sbed_new = Flat(snew_name)
-    else:
-        qbed_new = Bed(qnew_name)
-        sbed_new = Bed(snew_name)
+    if tandem_Nmax:
+        print >>sys.stderr, "running the local dups filter (tandem_Nmax=%d)..." % tandem_Nmax
+        qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
+        sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
+        print >>sys.stderr, "write local dups to files %s and %s" % \
+                (qdups_fh.name, sdups_fh.name)
 
-    qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed_new))
-    sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
+        qdups_to_mother = {}
+        for accns in sorted(tandem_grouper(qbed, filtered_blasts, 
+                                            flip=True, tandem_Nmax=tandem_Nmax)):
+            print >>qdups_fh, "|".join(accns)
+            for dup in accns[1:]:
+                qdups_to_mother[dup] = accns[0]
+
+        sdups_to_mother = {}
+        for accns in sorted(tandem_grouper(sbed, filtered_blasts, 
+                                            flip=False, tandem_Nmax=tandem_Nmax)):
+            print >>sdups_fh, "|".join(accns)
+            for dup in accns[1:]:
+                sdups_to_mother[dup] = accns[0]
+
+        qdups_fh.close()
+        sdups_fh.close()
+
+        # generate filtered annotation files
+        for bed, children in [(qbed, qdups_to_mother), (sbed, sdups_to_mother)]:
+            out_name = "%s.filtered%s" % op.splitext(bed.filename)
+            print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
+            fh = open(out_name, "w")
+            for i, row in enumerate(bed):
+                if row['accn'] in children: continue
+                if is_flat_fmt:
+                    if i == 0: print >>fh, "\t".join(Flat.names)
+                    print >>fh, Flat.row_string(row)
+                else:
+                    print >>fh, row
+            fh.close()
+        
+        before_filter = len(filtered_blasts)
+        filtered_blasts = list(filter_tandem(filtered_blasts, \
+                qdups_to_mother, sdups_to_mother))
+        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
+
+        # write new bed files
+        qnew_name = "%s.filtered%s" % op.splitext(qbed.filename)
+        snew_name = "%s.filtered%s" % op.splitext(sbed.filename)
+
+        if is_flat_fmt:
+            from flatfeature import Flat
+            qbed_new = Flat(qnew_name)
+            sbed_new = Flat(snew_name)
+        else:
+            qbed_new = Bed(qnew_name)
+            sbed_new = Bed(snew_name)
+
+        qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed_new))
+        sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
+
+    if top_N:
+        before_filter = len(filtered_blasts)
+        print >>sys.stderr, "running the top-N filter (top_N=%d)..." % top_N
+        filtered_blasts = list(filter_top_n(filtered_blasts, top_N=top_N))
+        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
+
+    if cscore:
+        before_filter = len(filtered_blasts)
+        print >>sys.stderr, "running the cscore filter (cscore>=%.1f)..." % cscore
+        filtered_blasts = list(filter_cscore(filtered_blasts, cscore=cscore))
+        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
+
+    write_raw(qorder, sorder, filtered_blasts, raw_fh)
+
+
+def write_raw(qorder, sorder, filtered_blasts, raw_fh):
 
     print >>sys.stderr, "write raw file %s" % raw_fh.name
-    for b in filter_to_mother(filtered_blasts, qdups_to_mother, sdups_to_mother):
+    for b in filtered_blasts: 
         qi, q = qorder[b.query]
         si, s = sorder[b.subject]
         qseqid, sseqid = q['seqid'], s['seqid']
@@ -205,18 +232,37 @@ def write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mothe
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
 
-def top_n_filter(blast_list, n=10):
+# ---------------- All BLAST filters ----------------
+
+def filter_cscore(blast_list, cscore=.5):
+
+    best_score = {}
+    for b in blast_list:
+        if b.query not in best_score or b.score > best_score[b.query]:
+            best_score[b.query] = b.score
+        if b.subject not in best_score or b.score > best_score[b.subject]:
+            best_score[b.subject] = b.score
+
+    for b in blast_list:
+        cur_cscore = b.score / max(best_score[b.query], best_score[b.subject])
+        if cur_cscore > cscore:
+            yield b
+
+
+def filter_top_n(blast_list, top_N=10):
+
     q_hits = collections.defaultdict(int)
     s_hits = collections.defaultdict(int)
+    top_N *= 2
 
     for b in blast_list:
         q_hits[b.query] += 1
         s_hits[b.subject] += 1
-        if q_hits[b.query] + s_hits[b.subject] > 2 * n: continue
+        if q_hits[b.query] + s_hits[b.subject] > top_N: continue
         yield b
     
 
-def filter_to_mother(blast_list, qdups_to_mother, sdups_to_mother):
+def filter_tandem(blast_list, qdups_to_mother, sdups_to_mother):
     
     mother_blast = []
     for b in blast_list:
@@ -233,7 +279,7 @@ def filter_to_mother(blast_list, qdups_to_mother, sdups_to_mother):
         yield b
 
 
-def tandem_grouper(bed, blast_list, Nmax=10, flip=True):
+def tandem_grouper(bed, blast_list, tandem_Nmax=10, flip=True):
     if not flip:
         simple_blast = [(b.query, (b.sseqid, b.si)) for b in blast_list] 
     else:
@@ -247,8 +293,8 @@ def tandem_grouper(bed, blast_list, Nmax=10, flip=True):
         hits = [x[1] for x in hits]
         for ia, a in enumerate(hits[:-1]):
             b = hits[ia + 1]
-            # on the same chromosome and rank difference no larger than Nmax
-            if b[1] - a[1] <= Nmax and b[0] == a[0]: 
+            # on the same chromosome and rank difference no larger than tandem_Nmax
+            if b[1] - a[1] <= tandem_Nmax and b[0] == a[0]: 
                 standems.join(a[1], b[1])
 
     for group in standems:
@@ -266,17 +312,24 @@ if __name__ == "__main__":
             help="path to qbed or qflat")
     parser.add_option("--sbed", dest="sbed", 
             help="path to sbed or sflat")
-    parser.add_option("--Nmax", dest="Nmax", type="int", default=10, 
-            help="merge tandem genes within distance "\
+
+    filter_group = optparse.OptionGroup(parser, "BLAST filters")
+    filter_group.add_option("--tandem_Nmax", dest="tandem_Nmax", type="int", default=None, 
+            help="merge tandem genes within distance " \
                  "[default: %default genes]")
+    filter_group.add_option("--top_N", dest="top_N", type="int", default=None,
+            help="retain only top-N hit from BLAST " \
+                 "[default: top %default hits]")
+    filter_group.add_option("--cscore", type="float", default=None,
+            help="retain hits that have good bitscore "\
+                 "[default: better than %default of the best hit]")
+    
+    parser.add_option_group(filter_group)
 
     (options, blast_files) = parser.parse_args()
 
     if not (len(blast_files) == 1 and options.qbed and options.sbed):
         sys.exit(parser.print_help())
 
-    is_flat_fmt = options.qbed.endswith(".flat")
-
-    main(options.qbed, options.sbed, blast_files[0], Nmax=options.Nmax,
-            is_flat_fmt=is_flat_fmt)
+    main(blast_files[0], options)
 
