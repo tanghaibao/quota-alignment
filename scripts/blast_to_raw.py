@@ -205,6 +205,17 @@ def write_new_files(qbed, sbed, filtered_blasts, qdups_to_mother, sdups_to_mothe
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
 
+def top_n_filter(blast_list, n=10):
+    q_hits = collections.defaultdict(int)
+    s_hits = collections.defaultdict(int)
+
+    for b in blast_list:
+        q_hits[b.query] += 1
+        s_hits[b.subject] += 1
+        if q_hits[b.query] + s_hits[b.subject] > 2 * n: continue
+        yield b
+    
+
 def filter_to_mother(blast_list, qdups_to_mother, sdups_to_mother):
     
     mother_blast = []
