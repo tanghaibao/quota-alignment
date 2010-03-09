@@ -14,10 +14,9 @@ import sys
 try:
     import gt
 except:
-    print >>sys.stderr, "gt module not found, try `easy_install gt`"
+    print >>sys.stderr, "gt module not found, try download and install genometools`" \
+            "<http://genometools.org/>"
     sys.exit(1)
-
-from bed_utils import Bed, Raw
 
 
 def gff_to_bed(gff_file, bed_fh=sys.stdout):
