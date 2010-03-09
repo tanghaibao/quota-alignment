@@ -161,7 +161,7 @@ if __name__ == '__main__':
                     "[default: %default]")
     merge_group.add_option("--Dm", dest="Dmax", 
             type="int", default=0,
-            help="merge blocks that are close to each other within distance cutoff"\
+            help="merge blocks that are close to each other within distance cutoff "\
                     "(cutoff for `block merging`) "\
                     "[default: %default units (gene or bp dist)] ")
     merge_group.add_option("--min_size", dest="min_size",

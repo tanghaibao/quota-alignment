@@ -58,30 +58,13 @@ Optional dependencies:
     easy_install bx-python
 
 
-Usage
------
-``quota_align.py`` only works on ``.qa`` format, but the script ``cluster_utils.py`` can convert a few formats (including ``.raw``, ``.dag`` and ``.maf``) to ``.qa`` format. Look at sample input (in the ``data/`` folder), and change your file accordingly. Mostly I recommend the ``.qa`` format, which include a list of *anchor points*::
-
-    ###
-    chr1 pos1 chr3 pos2 score
-    ###
-    chr1 pos1 chr2 pos2 score
-    chr1 pos1 chr2 pos2 score
-
-Each anchor point correspond to a BLAST match. Note that the symbol ``#`` separates each *cluster*, which contains one or more anchor points. Anchor points within the same cluster must be on the same chromosome pair. If you have no idea what cluster each anchor point belongs and don't plan to use a third-party chainer, you can specify the format to be ``.raw``.
-
-The utility script ``cluster_utils.py`` can be used for converting various formats to the ``.qa`` format, it can also print out the integer sequences (representing block ids) for downstream `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ rearrangment analysis (use ``--print_grimm`` option).
-
-Run ``quota_align.py`` or ``cluster_utils.py`` for all possible options. 
-
-
 Cookbook
 --------
 The default package comes with the test data for case 1 and 2 in ``run.sh``. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``.
 
 BLAST anchors chaining and quota-based screening
 ::::::::::::::::::::::::::::::::::::::::::::::::::::
-First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format)::
+First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format), see the section `BLAST and BLASTZ filtering`_::
 
     1       6       1       4848    1e-12 
     1       7       1       4847    2e-10 
@@ -161,6 +144,21 @@ The script will print this::
     -42 43 56 57 -58 -59 60 -61$
 
 This is the input format for Glenn Tesler's `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ software. You can either run it locally or on their `website <http://nbcr.sdsc.edu/GRIMM/grimm.cgi>`_.
+
+
+BLAST and BLASTZ filtering
+------------------------------------
+It is advised to filter the BLAST results before chaining, using the ``blast_to_raw.py`` shipped in this package. Say you have BLAST file (tabular format) ready. You need to do::
+
+    blast_to_raw.py athaliana_grape.blastp --qbed=athaliana.bed --sbed=grape.bed --tandem_Nmax=20 --cscore=.5
+
+This will convert the BLAST file into the ``.raw`` formatted file that ``quota_align.py`` can understand. For your convenience, several BLAST filters are also implemented in ``blast_to_raw.py``.
+
+- Removing local dups (``--tandem_Nmax=20`` will group the local dups that are within 20 gene distance)
+- Retaining top N hits (``--top_N=10`` will keep only the top 10 hits)
+- Use the cscore filtering (``--cscore=.5`` will keep only the hits that have a good score). See reference for cscore in the supplementary of `sea anemone paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>`_. C-score between gene A and B is defined::
+
+    cscore(A, B) = score(A, B) / max(best score of A, best score of B)
 
 
 Reference
