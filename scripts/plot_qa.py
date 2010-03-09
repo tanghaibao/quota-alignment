@@ -33,16 +33,16 @@ def dotplot(qa, qbed, sbed, image_name):
     data = [(b.pos_a, b.pos_b) for b in qa]
     x, y = zip(*data)
     ax.scatter(x, y, c='k', s=.1, lw=0, alpha=.9)
-    
+
     xlim = (0, len(qbed))
     ylim = (0, len(sbed))
-   
+
     xchr_labels, ychr_labels = [], []
     # plot the chromosome breaks
     for (seqid, beg, end) in get_breaks(qbed):
         xchr_labels.append((seqid, (beg + end)/2))
-        ax.plot([beg, beg], ylim, "g-", alpha=.5)        
-    
+        ax.plot([beg, beg], ylim, "g-", alpha=.5)
+
     for (seqid, beg, end) in get_breaks(sbed):
         ychr_labels.append((seqid, (beg + end)/2))
         ax.plot(xlim, [beg, beg], "g-", alpha=.5)
@@ -61,6 +61,12 @@ def dotplot(qa, qbed, sbed, image_name):
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
+    # i always like the latex font
+    _ = lambda x: r"$\rm{%s}$" % x.replace(" ", r"\ ")
+    # add genome names
+    ax.set_xlabel(_(qbed.filename.split(".")[0]))
+    ax.set_ylabel(_(sbed.filename.split(".")[0]))
+
     # beautify the numeric axis
     import matplotlib.ticker as ticker
     [tick.set_visible(False) for tick in ax.get_xticklines() + ax.get_yticklines()]
@@ -75,26 +81,26 @@ def dotplot(qa, qbed, sbed, image_name):
 
 
 if __name__ == "__main__":
-    
+
     import optparse
 
     parser = optparse.OptionParser(__doc__)
-    parser.add_option("--qbed", dest="qbed", 
+    parser.add_option("--qbed", dest="qbed",
             help="path to qbed or qflat")
-    parser.add_option("--sbed", dest="sbed", 
+    parser.add_option("--sbed", dest="sbed",
             help="path to sbed or sflat")
-            
+
     (options, args) = parser.parse_args()
 
     if not (len(args) == 1 and options.qbed and options.sbed):
         sys.exit(parser.print_help())
-    
+
     qbed = Bed(options.qbed)
     sbed = Bed(options.sbed)
-    
+
     qa_file = args[0]
     qa = Raw(qa_file)
-    
+
     image_name = op.splitext(qa_file)[0] + ".png"
     dotplot(qa, qbed, sbed, image_name)
 
