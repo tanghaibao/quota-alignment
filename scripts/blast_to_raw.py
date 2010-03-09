@@ -27,6 +27,7 @@ import collections
 import itertools
 
 from math import log10
+from bed_utils import Bed
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
 
@@ -63,46 +64,8 @@ class BlastLine(object):
                 for attr in BlastLine.__slots__]))
 
 
-class BedLine(object):
-    __slots__ = ("seqid", "start", "end", "accn")
-
-    def __init__(self, sline): 
-        args = sline.strip().split("\t")
-        self.seqid = args[0] 
-        self.start = int(args[1])
-        self.end = int(args[2])
-        self.accn = args[3] 
-
-    def __str__(self):
-        return "\t".join(map(str, [getattr(self, attr) \
-                for attr in BedLine.__slots__]))
-
-    def __getitem__(self, key): 
-        return getattr(self, key)
-
-
-class Bed(list):
-    
-    def __init__(self, filename):
-        self.filename = filename
-        beds = []
-        for line in open(filename):
-            if line[0] == "#": continue
-            if line.startswith('track'): continue
-            beds.append(BedLine(line))
-
-        self.seqids = sorted(set(b.seqid for b in beds))
-        self.beds = sorted(beds, key=lambda a: (a.seqid, a.start)) 
-
-    def __getitem__(self, i):
-        return self.beds[i]
-
-    def __len__(self):
-        return len(self.beds)
-
-    def __iter__(self):
-        for b in self.beds:
-            yield b
+# get the gene order given a Bed or Flat object
+get_order = lambda bed: dict((f['accn'], (i, f)) for (i, f) in enumerate(bed))
 
 
 def main(blast_file, options):
@@ -123,8 +86,8 @@ def main(blast_file, options):
         qbed = Bed(qbed_file)
         sbed = Bed(sbed_file)
 
-    qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed))
-    sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed))
+    qorder = get_order(qbed) 
+    sorder = get_order(sbed) 
 
     fp = file(blast_file)
     print >>sys.stderr, "read BLAST file %s (total %d lines)" % \
@@ -151,10 +114,6 @@ def main(blast_file, options):
         
         filtered_blasts.append(b)
 
-    # this is the final output we will write to after three optional BLAST filters below
-    raw_name = "%s.filtered.raw" % op.splitext(blast_file)[0]
-    raw_fh = open(raw_name, "w")
-
     if tandem_Nmax:
         print >>sys.stderr, "running the local dups filter (tandem_Nmax=%d)..." % tandem_Nmax
         qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
@@ -179,9 +138,9 @@ def main(blast_file, options):
         qdups_fh.close()
         sdups_fh.close()
 
-        # generate filtered annotation files
+        # generate local dup removed annotation files
         for bed, children in [(qbed, qdups_to_mother), (sbed, sdups_to_mother)]:
-            out_name = "%s.filtered%s" % op.splitext(bed.filename)
+            out_name = "%s.nolocaldups%s" % op.splitext(bed.filename)
             print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
             fh = open(out_name, "w")
             for i, row in enumerate(bed):
@@ -198,9 +157,8 @@ def main(blast_file, options):
                 qdups_to_mother, sdups_to_mother))
         print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 
-        # write new bed files
-        qnew_name = "%s.filtered%s" % op.splitext(qbed.filename)
-        snew_name = "%s.filtered%s" % op.splitext(sbed.filename)
+        qnew_name = "%s.nolocaldups%s" % op.splitext(qbed.filename)
+        snew_name = "%s.nolocaldups%s" % op.splitext(sbed.filename)
 
         if is_flat_fmt:
             from flatfeature import Flat
@@ -210,8 +168,8 @@ def main(blast_file, options):
             qbed_new = Bed(qnew_name)
             sbed_new = Bed(snew_name)
 
-        qorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(qbed_new))
-        sorder = dict((f['accn'], (i, f)) for (i, f) in enumerate(sbed_new))
+        qorder = get_order(qbed_new) 
+        sorder = get_order(sbed_new) 
 
     if top_N:
         before_filter = len(filtered_blasts)
@@ -224,6 +182,10 @@ def main(blast_file, options):
         print >>sys.stderr, "running the cscore filter (cscore>=%.1f)..." % cscore
         filtered_blasts = list(filter_cscore(filtered_blasts, cscore=cscore))
         print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
+
+    # this is the final output we will write to after BLAST filters
+    raw_name = "%s.raw" % op.splitext(blast_file)[0]
+    raw_fh = open(raw_name, "w")
 
     write_raw(qorder, sorder, filtered_blasts, raw_fh)
 

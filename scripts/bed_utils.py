@@ -1,3 +1,7 @@
+"""
+Classes to handle the .bed file and .raw file
+"""
+
 class BedLine(object):
     __slots__ = ("seqid", "start", "end", "accn")
 
@@ -38,9 +42,6 @@ class Bed(list):
     def __iter__(self):
         for b in self.beds:
             yield b
-
-    def get_order(self):
-        return dict((f['accn'], (i, f)) for (i, f) in enumerate(self.beds))
 
 
 class RawLine(object):
