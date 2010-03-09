@@ -64,7 +64,7 @@ The default package comes with the test data for case 1 and 2 in ``run.sh``. Mor
 
 BLAST anchors chaining and quota-based screening
 ::::::::::::::::::::::::::::::::::::::::::::::::::::
-First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format), see the section `BLAST and BLASTZ filtering`_::
+First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format), see the section `Pre- and post-processing`_::
 
     1       6       1       4848    1e-12 
     1       7       1       4847    2e-10 
@@ -146,19 +146,38 @@ The script will print this::
 This is the input format for Glenn Tesler's `GRIMM <http://grimm.ucsd.edu/GRIMM/>`_ software. You can either run it locally or on their `website <http://nbcr.sdsc.edu/GRIMM/grimm.cgi>`_.
 
 
-BLAST and BLASTZ filtering
+Pre- and post-processing
 ------------------------------------
-It is advised to filter the BLAST results before chaining, using the ``blast_to_raw.py`` shipped in this package. Say you have BLAST file (tabular format) ready. You need to do::
+There are a few utility scripts included in ``scripts/`` folder.
+
+GFF to bed
+::::::::::::::::::::
+Most annotation groups provide ``.gff`` file (see `gff format <http://www.sequenceontology.org/gff3.shtml>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following.
+
+BLAST filtering
+::::::::::::::::::::
+To filter the BLAST results before chaining, using the ``blast_to_raw.py`` shipped in this package. Say you have BLAST file (tabular format) ready. You need to do::
 
     blast_to_raw.py athaliana_grape.blastp --qbed=athaliana.bed --sbed=grape.bed --tandem_Nmax=20 --cscore=.5
 
 This will convert the BLAST file into the ``.raw`` formatted file that ``quota_align.py`` can understand. For your convenience, several BLAST filters are also implemented in ``blast_to_raw.py``.
 
-- Removing local dups (``--tandem_Nmax=20`` will group the local dups that are within 20 gene distance)
+- Removing local dups (``--tandem_Nmax=20`` will group the local dups that are within 20 gene distance). When this option is on, ``blast_to_raw.py`` will write new ``.nolocaldups.bed`` file, these will substitute your original ``.bed`` file from now on.
 - Retaining top N hits (``--top_N=10`` will keep only the top 10 hits)
 - Use the cscore filtering (``--cscore=.5`` will keep only the hits that have a good score). See reference for cscore in the supplementary of `sea anemone paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>`_. C-score between gene A and B is defined::
 
-    cscore(A, B) = score(A, B) / max(best score of A, best score of B)
+    cscore(A, B) = score(A, B)/max(best score of A, best score of B)
+
+Plot dot plot
+:::::::::::::::::::::
+To visualize the ``quota-align.py`` result, all you need is the ``.qa.filtered`` result, and two ``.bed`` file (**remember if you have removed local dups above, make sure you use the ``.nolocaldups.bed``**). As an example::
+
+    plot_qa.py --qbed=athaliana.nolocaldups.bed --sbed=grape.nolocaldups.bed athaliana_grape.   qa.filtered 
+
+This will generate a dot plot that you can stare to spot any problem. Below is an example of athaliana-grape dot plot when quota of ``4:1`` is enforced.
+
+.. image:: http://lh5.ggpht.com/_srvRoIok9Xs/S5alO5d7USI/AAAAAAAAA1s/Vba14ZyAQuU/s800/athaliana_grape.qa.png 
+    :alt: sample dotplot
 
 
 Reference
