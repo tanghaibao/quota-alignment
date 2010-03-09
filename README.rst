@@ -152,7 +152,11 @@ There are a few utility scripts included in ``scripts/`` folder.
 
 GFF to bed
 ::::::::::::::::::::
-Most annotation groups provide ``.gff`` file (see `gff format <http://www.sequenceontology.org/gff3.shtml>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following.
+Most annotation groups provide ``.gff`` file (see `gff format <http://genome.ucsc.edu/FAQ/FAQformat.html#format3>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following to create the ``.bed`` file::
+
+    gff_to_bed.py athaliana.gff >athaliana.bed
+
+This will get protein-coding models and put these in the ``.bed`` format. ``.bed`` format is required for doing BLAST filtering, see below.
 
 BLAST filtering
 ::::::::::::::::::::
@@ -172,7 +176,7 @@ Plot dot plot
 :::::::::::::::::::::
 To visualize the ``quota-align.py`` result, all you need is the ``.qa.filtered`` result, and two ``.bed`` file (**remember if you have removed local dups above, make sure you use the ``.nolocaldups.bed``**). As an example::
 
-    plot_qa.py --qbed=athaliana.nolocaldups.bed --sbed=grape.nolocaldups.bed athaliana_grape.   qa.filtered 
+    plot_qa.py --qbed=athaliana.nolocaldups.bed --sbed=grape.nolocaldups.bed athaliana_grape.qa.filtered 
 
 This will generate a dot plot that you can stare to spot any problem. Below is an example of athaliana-grape dot plot when quota of ``4:1`` is enforced.
 
