@@ -8,9 +8,17 @@ accepts .bed format: <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>
 or .flat format: <http://github.com/brentp/flatfeature/>
 and a blast file.
 
+local dup filter:
 if the input is query.bed and subject.bed, the script files query.localdups and subject.localdups are created containing the parent|offspring dups, as inferred by subjects hitting the same query or queries hitting the same subject.
 
-A .raw file (which is the input for the quota-align pipeline <http://github.com/tanghaibao/quota-alignment/>) is created
+top N filter:
+just returns the best N hits given a query or subject
+
+cscore filter:
+see supplementary info for sea anemone genome paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>, formula below
+cscore(A,B) = score(A,B) / max(best score for A, best score for B)
+
+Finally a .raw file (which is the input for the quota-align pipeline <http://github.com/tanghaibao/quota-alignment/>) is created
 """
 
 import sys
@@ -315,14 +323,11 @@ if __name__ == "__main__":
 
     filter_group = optparse.OptionGroup(parser, "BLAST filters")
     filter_group.add_option("--tandem_Nmax", dest="tandem_Nmax", type="int", default=None, 
-            help="merge tandem genes within distance " \
-                 "[default: %default genes]")
+            help="merge tandem genes within distance [default: %default]")
     filter_group.add_option("--top_N", dest="top_N", type="int", default=None,
-            help="retain only top-N hit from BLAST " \
-                 "[default: top %default hits]")
+            help="retain only top-N hit from BLAST [default: %default]")
     filter_group.add_option("--cscore", type="float", default=None,
-            help="retain hits that have good bitscore "\
-                 "[default: better than %default of the best hit]")
+            help="retain hits that have good bitscore [default: %default]")
     
     parser.add_option_group(filter_group)
 
