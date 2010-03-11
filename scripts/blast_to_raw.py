@@ -180,7 +180,7 @@ def main(blast_file, options):
 
     if cscore:
         before_filter = len(filtered_blasts)
-        print >>sys.stderr, "running the cscore filter (cscore>=%.1f)..." % cscore
+        print >>sys.stderr, "running the cscore filter (cscore>=%.2f)..." % cscore
         filtered_blasts = list(filter_cscore(filtered_blasts, cscore=cscore))
         print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 

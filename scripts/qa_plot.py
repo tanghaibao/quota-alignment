@@ -10,8 +10,12 @@ visualize the qa_file in a dotplot
 import os.path as op
 import itertools
 import sys
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+from matplotlib.patches import Rectangle
 
 from bed_utils import Bed, Raw
+
 
 def get_breaks(bed):
     # get chromosome break positions
@@ -22,13 +26,33 @@ def get_breaks(bed):
         yield seqid, ranks[0][1], ranks[-1][1]
 
 
-def dotplot(qa, qbed, sbed, image_name):
+def draw_box(fp, ax, color="b"):
+    fp.seek(0)
+    row = fp.readline()
+    while row:
+        row = fp.readline()
+        xrect, yrect = [], []
+        while row and row[0]!="#":
+            ca, a, cb, b, score = row.split()
+            xrect.append(int(a)), yrect.append(int(b))
+            row = fp.readline()
+        xmin, xmax, ymin, ymax = min(xrect), max(xrect), \
+                                min(yrect), max(yrect)
+        ax.add_patch(Rectangle((xmin, ymin), xmax-xmin, ymax-ymin,\
+                                ec=color, fill=False, lw=.2))
 
-    import matplotlib.pyplot as plt
+
+def dotplot(qa_file, qbed, sbed, image_name):
+
+    qa = Raw(qa_file)
+    qa_fh = file(qa_file)
 
     fig = plt.figure(1,(8,8))
     root = fig.add_axes([0,0,1,1]) # the whole canvas
     ax = fig.add_axes([.1,.1,.8,.8]) # the dot plot
+
+    # the boxes surrounding each cluster
+    draw_box(qa_fh, ax)
 
     data = [(b.pos_a, b.pos_b) for b in qa]
     x, y = zip(*data)
@@ -68,7 +92,6 @@ def dotplot(qa, qbed, sbed, image_name):
     ax.set_ylabel(_(sbed.filename.split(".")[0]))
 
     # beautify the numeric axis
-    import matplotlib.ticker as ticker
     [tick.set_visible(False) for tick in ax.get_xticklines() + ax.get_yticklines()]
     formatter = ticker.FuncFormatter(lambda x, pos: r"$%d$" % x)
     ax.xaxis.set_major_formatter(formatter)
@@ -99,8 +122,7 @@ if __name__ == "__main__":
     sbed = Bed(options.sbed)
 
     qa_file = args[0]
-    qa = Raw(qa_file)
 
     image_name = op.splitext(qa_file)[0] + ".png"
-    dotplot(qa, qbed, sbed, image_name)
+    dotplot(qa_file, qbed, sbed, image_name)
 
