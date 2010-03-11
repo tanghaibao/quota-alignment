@@ -31,8 +31,8 @@ def gff_to_bed(gff_file, bed_fh=sys.stdout, cds=True):
             is_cds = any(f.type=="mRNA" or f.type=="CDS" for f in subf) and\
                     feat.type=="gene"
             if cds == is_cds:
-                print >>bed_fh, seqid.id, feat.location.start, \
-                        feat.location.end, feat.id, feat.type
+                print >>bed_fh, "\t".join(str(x) for x in (seqid.id, feat.location.start, \
+                        feat.location.end, feat.id, feat.type))
 
 
 if __name__ == "__main__":
