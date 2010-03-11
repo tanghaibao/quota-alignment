@@ -57,7 +57,7 @@ Installation
 
     easy_install bx-python
 
-- `genometools <http://genometools.org/>`_ package, this is only required when user wants to convert ``.gff`` file to ``.bed`` format, see section `Pre- and post-processing`_.
+- `BCBio <http://github.com/chapmanb/bcbb/tree/master/gff/BCBio/>`_ package, this is only required when user wants to convert ``.gff`` file to ``.bed`` format, see section `Pre- and post-processing`_.
 
 
 Cookbook
