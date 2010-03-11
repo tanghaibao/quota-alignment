@@ -51,7 +51,7 @@ def dotplot(qa, qbed, sbed, image_name):
     for label, pos in xchr_labels:
         pos = .1 + pos * .8/xlim[1]
         root.text(pos, .91, r"%s" % label, color="b",
-            size=9, alpha=.5, ha="center", va="top", rotation=90)
+            size=9, alpha=.5, rotation=45)
 
     for label, pos in ychr_labels:
         pos = .1 + pos * .8/ylim[1]
