@@ -75,6 +75,8 @@ def main(blast_file, options):
 
     # is this a self-self blast?
     is_self = (qbed_file == sbed_file)
+    if is_self:
+        print >>sys.stderr, "... looks like a self-self BLAST to me"
     
     tandem_Nmax = options.tandem_Nmax
     top_N = options.top_N
@@ -106,13 +108,20 @@ def main(blast_file, options):
         query, subject = gene_name(b.query), gene_name(b.subject)
         if query==subject: continue
         if query not in qorder or subject not in sorder: continue
+        qi, q = qorder[query]
+        si, s = sorder[subject]
+        
+        # remove redundancy a<->b when doing self-self BLAST
+        if is_self and qi > si:
+            query, subject = subject, query
+            qi, si = si, qi
+            q, s = s, q
+
         key = query, subject
         if key in seen: continue
         seen.add(key)
         b.query, b.subject = key
 
-        qi, q = qorder[query]
-        si, s = sorder[subject]
         b.qi, b.si = qi, si
         b.qseqid, b.sseqid = q['seqid'], s['seqid']
         
@@ -129,7 +138,6 @@ def main(blast_file, options):
         qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
 
         if is_self:
-            print >>sys.stderr, "... looks like a self-self blast to me"
             for s in standems: qtandems.join(*s)
             qdups_to_mother = write_localdups(qdups_fh, qtandems, qbed)
             sdups_to_mother = qdups_to_mother
@@ -139,24 +147,16 @@ def main(blast_file, options):
             sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
             sdups_to_mother = write_localdups(sdups_fh, standems, sbed)
 
-        # generate local dup removed annotation files
-        for bed, children in [(qbed, qdups_to_mother), (sbed, sdups_to_mother)]:
-            out_name = "%s.nolocaldups%s" % op.splitext(bed.filename)
-            print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
-            fh = open(out_name, "w")
-            for i, row in enumerate(bed):
-                if row['accn'] in children: continue
-                if is_flat_fmt:
-                    if i == 0: print >>fh, "\t".join(Flat.names)
-                    print >>fh, Flat.row_string(row)
-                else:
-                    print >>fh, row
-            fh.close()
+        # write out new .bed after tandem removal
+        write_new_bed(qbed, qdups_to_mother, is_flat_fmt=is_flat_fmt)
+        if not is_self:
+            write_new_bed(sbed, sdups_to_mother, is_flat_fmt=is_flat_fmt)
         
         before_filter = len(filtered_blasts)
         filtered_blasts = list(filter_tandem(filtered_blasts, \
                 qdups_to_mother, sdups_to_mother))
-        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
+        print >>sys.stderr, "after filter (%d->%d)..." % \
+                (before_filter, len(filtered_blasts))
 
         qnew_name = "%s.nolocaldups%s" % op.splitext(qbed.filename)
         snew_name = "%s.nolocaldups%s" % op.splitext(sbed.filename)
@@ -209,6 +209,21 @@ def write_localdups(dups_fh, tandems, bed):
             dups_to_mother[dup] = accns[0]
 
     return dups_to_mother
+
+
+def write_new_bed(bed, children, is_flat_fmt=False):
+    # generate local dup removed annotation files
+    out_name = "%s.nolocaldups%s" % op.splitext(bed.filename)
+    print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
+    fh = open(out_name, "w")
+    for i, row in enumerate(bed):
+        if row['accn'] in children: continue
+        if is_flat_fmt:
+            if i == 0: print >>fh, "\t".join(Flat.names)
+            print >>fh, Flat.row_string(row)
+        else:
+            print >>fh, row
+    fh.close()
 
 
 def write_raw(qorder, sorder, filtered_blasts, raw_fh):
@@ -264,6 +279,7 @@ def filter_tandem(blast_list, qdups_to_mother, sdups_to_mother):
     mother_blast.sort(key=lambda b: b.score, reverse=True)
     seen = set() 
     for b in mother_blast:
+        if b.query==b.subject: continue
         key = b.query, b.subject
         if key in seen: continue
         seen.add(key)

@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
     self_match = options.self_match
 
-    clusters = read_clusters(qa_file, self_match=self_match)
+    clusters = read_clusters(qa_file)
     for cluster in clusters:
         assert len(cluster) > 0
 
@@ -257,7 +257,7 @@ if __name__ == '__main__':
 
     write_clusters(fw, sorted(clusters))
 
-    filtered_len_x, filtered_len_y = calc_coverage(clusters, self_match)
+    filtered_len_x, filtered_len_y = calc_coverage(clusters, self_match=self_match)
     if self_match:
         print >>sys.stderr, "coverage: %.1f%% (self-match)" % \
                 (filtered_len_x*100./total_len_x)

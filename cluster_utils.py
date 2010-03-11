@@ -40,7 +40,7 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
     return max_match if matchScore > max_match else matchScore
 
 
-def parse_line(row, log_evalue=False, scale=1, fmt="qa", self_match=False):
+def parse_line(row, log_evalue=False, scale=1, fmt="qa"):
     """
     Return anchor point info from an input line (.qa, .raw format)
     """
@@ -58,9 +58,6 @@ def parse_line(row, log_evalue=False, scale=1, fmt="qa", self_match=False):
     
     a, b = int(a), int(b)
     gene1, gene2 = (ca, a), (cb, b)
-
-    if self_match and gene1 > gene2: 
-        gene1, gene2 = gene2, gene1
 
     return (gene1, gene2, score)
 
@@ -91,7 +88,7 @@ def read_raw(filename, log_evalue=False, scale=1):
     return clusters
 
 
-def read_clusters(filename, log_evalue=False, scale=1, fmt="qa", self_match=False):
+def read_clusters(filename, log_evalue=False, scale=1, fmt="qa"):
     """
     Read cluster info from .qa and .dag file
     """
@@ -106,8 +103,7 @@ def read_clusters(filename, log_evalue=False, scale=1, fmt="qa", self_match=Fals
         cluster = []
         while row and row[0] != "#":
             if row.strip()== "": break
-            anchor = parse_line(row, log_evalue=log_evalue, scale=scale, 
-                    fmt=fmt, self_match=self_match)
+            anchor = parse_line(row, log_evalue=log_evalue, scale=scale, fmt=fmt)
             cluster.append(anchor)
             row = fp.readline()
 
