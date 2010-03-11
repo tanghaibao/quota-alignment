@@ -72,6 +72,9 @@ def main(blast_file, options):
 
     is_flat_fmt = options.qbed.endswith(".flat")
     qbed_file, sbed_file = options.qbed, options.sbed
+
+    # is this a self-self blast?
+    is_self = (qbed_file == sbed_file)
     
     tandem_Nmax = options.tandem_Nmax
     top_N = options.top_N
@@ -101,6 +104,7 @@ def main(blast_file, options):
     for b in blasts:
         # deal with alternative splicings
         query, subject = gene_name(b.query), gene_name(b.subject)
+        if query==subject: continue
         if query not in qorder or subject not in sorder: continue
         key = query, subject
         if key in seen: continue
@@ -116,27 +120,24 @@ def main(blast_file, options):
 
     if tandem_Nmax:
         print >>sys.stderr, "running the local dups filter (tandem_Nmax=%d)..." % tandem_Nmax
+
+        qtandems = tandem_grouper(qbed, filtered_blasts,
+                flip=True, tandem_Nmax=tandem_Nmax)
+        standems = tandem_grouper(sbed, filtered_blasts, 
+                flip=False, tandem_Nmax=tandem_Nmax)
+
         qdups_fh = open(op.splitext(qbed_file)[0] + ".localdups", "w")
-        sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
-        print >>sys.stderr, "write local dups to files %s and %s" % \
-                (qdups_fh.name, sdups_fh.name)
 
-        qdups_to_mother = {}
-        for accns in sorted(tandem_grouper(qbed, filtered_blasts, 
-                                            flip=True, tandem_Nmax=tandem_Nmax)):
-            print >>qdups_fh, "|".join(accns)
-            for dup in accns[1:]:
-                qdups_to_mother[dup] = accns[0]
+        if is_self:
+            print >>sys.stderr, "... looks like a self-self blast to me"
+            for s in standems: qtandems.join(*s)
+            qdups_to_mother = write_localdups(qdups_fh, qtandems, qbed)
+            sdups_to_mother = qdups_to_mother
 
-        sdups_to_mother = {}
-        for accns in sorted(tandem_grouper(sbed, filtered_blasts, 
-                                            flip=False, tandem_Nmax=tandem_Nmax)):
-            print >>sdups_fh, "|".join(accns)
-            for dup in accns[1:]:
-                sdups_to_mother[dup] = accns[0]
-
-        qdups_fh.close()
-        sdups_fh.close()
+        else:
+            qdups_to_mother = write_localdups(qdups_fh, qtandems, qbed)
+            sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
+            sdups_to_mother = write_localdups(sdups_fh, standems, sbed)
 
         # generate local dup removed annotation files
         for bed, children in [(qbed, qdups_to_mother), (sbed, sdups_to_mother)]:
@@ -188,6 +189,26 @@ def main(blast_file, options):
     raw_fh = open(raw_name, "w")
 
     write_raw(qorder, sorder, filtered_blasts, raw_fh)
+
+
+def write_localdups(dups_fh, tandems, bed):
+
+    print >>sys.stderr, "write local dups to file", dups_fh.name
+
+    tandem_groups = []
+    for group in tandems:
+        rows = [bed[i] for i in group]
+        # within the tandem groups, genes are sorted with decreasing size
+        rows.sort(key=lambda a: abs(a['end'] - a['start']), reverse=True)
+        tandem_groups.append([row['accn'] for row in rows])
+
+    dups_to_mother = {}
+    for accns in sorted(tandem_groups):
+        print >>dups_fh, "|".join(accns)
+        for dup in accns[1:]:
+            dups_to_mother[dup] = accns[0]
+
+    return dups_to_mother
 
 
 def write_raw(qorder, sorder, filtered_blasts, raw_fh):
@@ -267,11 +288,7 @@ def tandem_grouper(bed, blast_list, tandem_Nmax=10, flip=True):
             if b[1] - a[1] <= tandem_Nmax and b[0] == a[0]: 
                 standems.join(a[1], b[1])
 
-    for group in standems:
-        rows = [bed[i] for i in group]
-        # within the tandem groups, genes are sorted with decreasing size
-        rows.sort(key=lambda a: abs(a['end'] - a['start']), reverse=True)
-        yield [row['accn'] for row in rows]
+    return standems
 
 
 if __name__ == "__main__":
