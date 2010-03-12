@@ -46,22 +46,32 @@ def gene_name(st):
 
 
 class BlastLine(object):
-    __slots__ = ("query", "subject", "evalue", "score", "qseqid", "sseqid", "qi", "si")
-
+    __slots__ = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
+                 'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score', \
+                 'qseqid', 'sseqid', 'qi', 'si')
+ 
     def __init__(self, sline):
         args = sline.split("\t")
         self.query = args[0]
         self.subject = args[1]
+        self.pctid = float(args[2])
+        self.hitlen = int(args[3])
+        self.nmismatch = int(args[4])
+        self.ngaps = int(args[5])
+        self.qstart = int(args[6])
+        self.qstop = int(args[7])
+        self.sstart = int(args[8])
+        self.sstop = int(args[9])
         self.evalue = float(args[10])
         self.score = float(args[11])
-
+ 
     def __repr__(self):
         return "BlastLine('%s' to '%s', eval=%.3f, score=%.1f)" % \
                 (self.query, self.subject, self.evalue, self.score)
 
     def __str__(self):
         return "\t".join(map(str, [getattr(self, attr) \
-                for attr in BlastLine.__slots__]))
+                for attr in BlastLine.__slots__][:-4]))
 
 
 # get the gene order given a Bed or Flat object
@@ -104,9 +114,8 @@ def main(blast_file, options):
     filtered_blasts = []
     seen = set() 
     for b in blasts:
-        # deal with alternative splicings
-        query, subject = gene_name(b.query), gene_name(b.subject)
-        if query==subject: continue
+        query, subject = b.query, b.subject
+        query, subject = gene_name(query), gene_name(subject)
         if query not in qorder or subject not in sorder: continue
         qi, q = qorder[query]
         si, s = sorder[subject]
@@ -189,6 +198,7 @@ def main(blast_file, options):
     raw_fh = open(raw_name, "w")
 
     write_raw(qorder, sorder, filtered_blasts, raw_fh)
+    #write_new_blast(filtered_blasts) 
 
 
 def write_localdups(dups_fh, tandems, bed):
@@ -204,7 +214,7 @@ def write_localdups(dups_fh, tandems, bed):
 
     dups_to_mother = {}
     for accns in sorted(tandem_groups):
-        print >>dups_fh, "|".join(accns)
+        print >>dups_fh, "\t".join(accns)
         for dup in accns[1:]:
             dups_to_mother[dup] = accns[0]
 
@@ -237,6 +247,10 @@ def write_raw(qorder, sorder, filtered_blasts, raw_fh):
         score = 50 if b.evalue == 0 else min(int(-log10(b.evalue)), 50)
         print >>raw_fh, "\t".join(map(str, (qseqid, qi, sseqid, si, score)))
 
+
+def write_new_blast(filtered_blasts, fh=sys.stdout):
+    for b in filtered_blasts:
+        print >>fh, b
 
 # ---------------- All BLAST filters ----------------
 
