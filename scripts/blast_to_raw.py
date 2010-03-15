@@ -150,7 +150,6 @@ def main(blast_file, options):
             for s in standems: qtandems.join(*s)
             qdups_to_mother = write_localdups(qdups_fh, qtandems, qbed)
             sdups_to_mother = qdups_to_mother
-
         else:
             qdups_to_mother = write_localdups(qdups_fh, qtandems, qbed)
             sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
@@ -302,9 +301,9 @@ def filter_tandem(blast_list, qdups_to_mother, sdups_to_mother):
 
 def tandem_grouper(bed, blast_list, tandem_Nmax=10, flip=True):
     if not flip:
-        simple_blast = [(b.query, (b.sseqid, b.si)) for b in blast_list] 
+        simple_blast = [(b.query, (b.sseqid, b.si)) for b in blast_list if b.evalue < 1e-10] 
     else:
-        simple_blast = [(b.subject, (b.qseqid, b.qi)) for b in blast_list] 
+        simple_blast = [(b.subject, (b.qseqid, b.qi)) for b in blast_list if b.evalue < 1e-10] 
 
     simple_blast.sort()
 
