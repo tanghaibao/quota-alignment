@@ -12,7 +12,6 @@ import itertools
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.patches import Rectangle
 
 from bed_utils import Bed, BlastLine
 
@@ -85,10 +84,12 @@ def dotplot(blast_file, qbed, sbed, image_name):
     ax.set_ylim(ylim)
 
     # i always like the latex font
-    _ = lambda x: r"$\rm{%s}$" % x.replace(" ", r"\ ")
+    _ = lambda x: r"$\rm{%s}$" % x.replace("_", " ").replace(" ", r"\ ")
+    to_ax_label = lambda fname: _(op.basename(fname).split(".")[0])
+
     # add genome names
-    ax.set_xlabel(_(qbed.filename.split(".")[0]))
-    ax.set_ylabel(_(sbed.filename.split(".")[0]))
+    ax.set_xlabel(to_ax_label(qbed.filename))
+    ax.set_ylabel(to_ax_label(sbed.filename))
 
     # beautify the numeric axis
     [tick.set_visible(False) for tick in ax.get_xticklines() + ax.get_yticklines()]
