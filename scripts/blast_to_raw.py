@@ -5,7 +5,6 @@
 %prog blast_file --qbed query.bed --sbed subject.bed
 
 accepts .bed format: <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>
-or .flat format: <http://github.com/brentp/flatfeature/>
 and a blast file.
 
 local dup filter:
@@ -45,13 +44,11 @@ def gene_name(st):
     return st.rsplit(".", 1)[0]
 
 
-# get the gene order given a Bed or Flat object
 get_order = lambda bed: dict((f['accn'], (i, f)) for (i, f) in enumerate(bed))
 
 
 def main(blast_file, options):
 
-    is_flat_fmt = options.qbed.endswith(".flat")
     qbed_file, sbed_file = options.qbed, options.sbed
 
     # is this a self-self blast?
@@ -64,13 +61,8 @@ def main(blast_file, options):
     cscore = options.cscore
 
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
-    if is_flat_fmt:
-        from flatfeature import Flat
-        qbed = Flat(qbed_file)
-        sbed = Flat(sbed_file)
-    else:
-        qbed = Bed(qbed_file)
-        sbed = Bed(sbed_file)
+    qbed = Bed(qbed_file)
+    sbed = Bed(sbed_file)
 
     qorder = get_order(qbed) 
     sorder = get_order(sbed) 
@@ -127,9 +119,9 @@ def main(blast_file, options):
             sdups_to_mother = write_localdups(sdups_fh, standems, sbed)
 
         # write out new .bed after tandem removal
-        write_new_bed(qbed, qdups_to_mother, is_flat_fmt=is_flat_fmt)
+        write_new_bed(qbed, qdups_to_mother)
         if not is_self:
-            write_new_bed(sbed, sdups_to_mother, is_flat_fmt=is_flat_fmt)
+            write_new_bed(sbed, sdups_to_mother)
         
         before_filter = len(filtered_blasts)
         filtered_blasts = list(filter_tandem(filtered_blasts, \
@@ -140,13 +132,8 @@ def main(blast_file, options):
         qnew_name = "%s.nolocaldups%s" % op.splitext(qbed.filename)
         snew_name = "%s.nolocaldups%s" % op.splitext(sbed.filename)
 
-        if is_flat_fmt:
-            from flatfeature import Flat
-            qbed_new = Flat(qnew_name)
-            sbed_new = Flat(snew_name)
-        else:
-            qbed_new = Bed(qnew_name)
-            sbed_new = Bed(snew_name)
+        qbed_new = Bed(qnew_name)
+        sbed_new = Bed(snew_name)
 
         qorder = get_order(qbed_new) 
         sorder = get_order(sbed_new) 
@@ -198,11 +185,7 @@ def write_new_bed(bed, children, is_flat_fmt=False):
     fh = open(out_name, "w")
     for i, row in enumerate(bed):
         if row['accn'] in children: continue
-        if is_flat_fmt:
-            if i == 0: print >>fh, "\t".join(Flat.names)
-            print >>fh, Flat.row_string(row)
-        else:
-            print >>fh, row
+        print >>fh, row
     fh.close()
 
 
