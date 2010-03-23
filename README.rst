@@ -3,7 +3,7 @@ Quota synteny alignment
 
 :Author: Haibao Tang (`tanghaibao <http://github.com/tanghaibao>`_), Brent Pedersen (`brentp <http://github.com/brentp>`_)
 :Email: tanghaibao@gmail.com
-:License: BSD
+:License: `BSD <http://creativecommons.org/licenses/BSD/>`_
 
 .. contents ::
 
@@ -12,14 +12,14 @@ Introduction
 
 Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected coverage (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
 
-.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,75,41,23,96,68,71,34,9|98,60,27,34,56,79,58,74,18,76|84,23,69,81,47,94,60,93,64,54&chm=s,,0,,16|h,FF0000,0,0.755,1|V,FF0000,0,0.76,1&chxt=x,x,y,y&chtt=Before+Quota+alignment&chs=300x200&chxl=1:|Genome+X|3:|Genome+Y&chxp=1,50|3,50 
+.. image:: http://bit.ly/aPPHYO 
     :alt: before quota-align
-.. image:: http://chart.apis.google.com/chart?cht=s&chd=t:12,87,41,23,71,34|98,60,34,56,74,18|84,23,81,47,93,64&chm=s,0CBF0B,0,,16&chxt=x,x,y,y&chtt=Quota+alignment+1:1&chs=300x200&chxl=1:|Genome+X|3:|Genome+Y&chxp=1,50|3,50
+.. image:: http://bit.ly/cikBwL 
     :alt: after quota-align
 
 This program tries to screen the clusters based on the coverage constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
-To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://toxic.berkeley.edu/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
+To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://genomevolution.org/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
 
 Installation
 ------------
@@ -77,13 +77,13 @@ Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``, and
 
     cluster_utils.py --format=raw --log_evalue maize_sorghum.raw maize_sorghum.qa
 
-``--log_evalue`` changes the E-value to ``min(int(-log10(E-value)),50)`` for score, so that all the BLAST anchors score in the range 0-50.
+``--log_evalue`` converts the E-value to ``min(int(-log10(E-value)),50)`` for score, so that all the BLAST anchors score in the range 0-50.
 
 Then we can do something like::
 
     quota_align.py --merge --Dm=20 --min_size=5 --quota=2:1 maize_sorghum.qa 
 
-``--merge`` asks for chaining, and the distance cutoff ``--Dm=20`` for extending the chain; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region).
+``--merge`` asks for chaining, distance cutoff ``--Dm=20`` for extending the chain, ``--min_size=5`` for keeping the chains that are long enought; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region).
 
 BLASTZ anchors chaining and quota-based screening
 :::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -110,9 +110,9 @@ First we need to figure out how to get the input data. See the last two sections
     cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
     quota_align.py --merge --Dm=20 --min_size=5 --self --quota=2:2 grape_grape.qa
 
-The reason for setting up ``--quota=2:2`` is because grape has `paleo-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option must be turned on for finding paralogous blocks. The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
+The reason for setting up ``--quota=2:2`` is because grape has `paleo-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option may be turned on for finding paralogous blocks, when you have reduced the redundancies in your ``.qa`` file (note that self-match is symmetric across diagonal). The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
 
-For a lineage that has tetraploidy event (genome doubling), using the example of brachypodium (which has undergone an ancient tetraploidy), we can do::
+For a lineage that has tetraploidy event (genome doubling), using the example of brachypodium (which has undergone an ancient pan-grass tetraploidy), we can do::
 
     cluster_utils.py --format=raw brachy_brachy.raw brachy_brachy.qa
     quota_align.py --merge --Dm=20 --self --quota=1:1 brachy_brachy.qa
@@ -121,7 +121,7 @@ Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but w
 
 Format block order for GRIMM analysis
 :::::::::::::::::::::::::::::::::::::
-This is only supported when ``--quota=1:1``. For example::
+This is so far only supported when ``--quota=1:1``. For example::
 
     quota_align.py --merge --quota=1:1 athaliana_lyrata.qa
     cluster_utils.py --print_grimm athaliana_lyrata.qa.filtered
@@ -164,11 +164,11 @@ BLAST filtering
 ::::::::::::::::::::
 The integer programming solver cannot solve large problem instance (say >60000 variables), this mostly will not happen if we filter our anchors carefully (removing redundant and weak anchors). To filter the BLAST results before chaining, using the ``blast_to_raw.py`` shipped in this package. Say you have BLAST file (tabular format) ready. You need to do::
 
-    blast_to_raw.py athaliana_grape.blastp --qbed=athaliana.bed --sbed=grape.bed --tandem_Nmax=20 --cscore=.5
+    blast_to_raw.py athaliana_grape.blastp --qbed=athaliana.bed --sbed=grape.bed --tandem_Nmax=10 --cscore=.5
 
 This will convert the BLAST file into the ``.raw`` formatted file that ``quota_align.py`` can understand. For your convenience, several BLAST filters are also implemented in ``blast_to_raw.py``. Notice these BLAST filters are **optional**.
 
-- Remove local dups (``--tandem_Nmax=20`` will group the local dups that are within 20 gene distance). When this option is on, ``blast_to_raw.py`` will write new ``.nolocaldups.bed`` file, these will substitute your original ``.bed`` file from now on.
+- Remove local dups (``--tandem_Nmax=10`` will group the local dups that are within 10 gene distance). When this option is on, ``blast_to_raw.py`` will write new ``.nolocaldups.bed`` file, these will substitute your original ``.bed`` file from now on.
 - Retain top N hits (``--top_N=10`` will keep only the top 10 hits)
 - Use the cscore filtering (``--cscore=.5`` will keep only the hits that have a good score). See reference for cscore in the supplementary of `sea anemone paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>`_. C-score between gene A and B is defined::
 
@@ -176,13 +176,13 @@ This will convert the BLAST file into the ``.raw`` formatted file that ``quota_a
 
 Plot dot plot
 :::::::::::::::::::::
-To visualize the ``quota-align.py`` result, all you need is the ``.qa.filtered`` result, and two ``.bed`` file (**remember if you have removed local dups above, make sure you use the ``.nolocaldups.bed``**). As an example::
+To visualize the ``quota-align.py`` result, all you need is the ``.qa.filtered`` result, and two ``.bed`` file (remember if you have removed local dups above, make sure you use the ``.nolocaldups.bed``). As an example::
 
     qa_plot.py --qbed=athaliana.nolocaldups.bed --sbed=grape.nolocaldups.bed athaliana_grape.qa.filtered 
 
 This will generate a dot plot that you can stare to spot any problem. Below is an example of athaliana-grape dot plot when quota of ``4:1`` is enforced (meaning that there are expected ``4`` athaliana regions mapping to ``1`` grape region).
 
-.. image:: http://lh5.ggpht.com/_srvRoIok9Xs/S5alO5d7USI/AAAAAAAAA1s/Vba14ZyAQuU/s800/athaliana_grape.qa.png 
+.. image:: http://lh3.ggpht.com/_srvRoIok9Xs/S6gz7Plyw-I/AAAAAAAAA2s/koz29tPJt8M/s800/athaliana_grape.qa.png 
     :alt: sample dotplot
 
 
