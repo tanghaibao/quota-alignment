@@ -154,11 +154,11 @@ There are a few utility scripts included in ``scripts/`` folder.
 
 GFF to BED 
 ::::::::::::::::::::
-Most annotation groups provide ``.gff`` file (see `gff format <http://genome.ucsc.edu/FAQ/FAQformat.html#format3>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following to create the ``.bed`` file (``gt`` module required)::
+Most annotation groups provide ``.gff`` file (see `gff format <http://genome.ucsc.edu/FAQ/FAQformat.html#format3>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following to create the ``.bed`` file (``BCBio`` module required)::
 
     gff_to_bed.py athaliana.gff >athaliana.bed
 
-This will get protein-coding models and put these in the ``.bed`` format. ``.bed`` format is required for doing BLAST filtering, see below.
+This will get protein-coding models and put these in the ``.bed`` format. ``.gff`` file must be **gff3-compatible**, otherwise you have to write customized parser. ``.bed`` format is required for doing BLAST filtering, see below.
 
 BLAST filtering
 ::::::::::::::::::::
