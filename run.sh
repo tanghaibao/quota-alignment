@@ -5,9 +5,9 @@ select TEST in `seq 1 5`;
 do
 case $TEST in
 1)
-./cluster_utils.py --format=qa --log_evalue data/athaliana_alyrata.dag data/athaliana_alyrata.qa
-./quota_align.py --merge --quota=1:1 data/athaliana_alyrata.qa
-./cluster_utils.py --print_grimm data/athaliana_alyrata.qa.filtered 
+#./cluster_utils.py --format=dag --log_evalue data/athaliana_lyrata.dag data/athaliana_lyrata.qa
+./quota_align.py --merge --quota=1:1 data/athaliana_lyrata.qa
+./cluster_utils.py --print_grimm data/athaliana_lyrata.qa.filtered 
 ;;
 
 2)
