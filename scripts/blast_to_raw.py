@@ -78,7 +78,8 @@ def main(blast_file, options):
     seen = set() 
     for b in blasts:
         query, subject = b.query, b.subject
-        query, subject = gene_name(query), gene_name(subject)
+        if options.strip_names:
+            query, subject = gene_name(query), gene_name(subject)
         if query not in qorder or subject not in sorder: continue
         qi, q = qorder[query]
         si, s = sorder[subject]
@@ -282,6 +283,8 @@ if __name__ == "__main__":
             help="path to qbed or qflat")
     parser.add_option("--sbed", dest="sbed", 
             help="path to sbed or sflat")
+    parser.add_option("--no_strip_names", dest="strip_names", action="store_false", default=True,
+            help="do not strip alternative splicing (e.g. At5g06540.1 -> At5g06540)")
 
     filter_group = optparse.OptionGroup(parser, "BLAST filters")
     filter_group.add_option("--tandem_Nmax", dest="tandem_Nmax", type="int", default=None, 
