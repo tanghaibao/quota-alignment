@@ -17,7 +17,6 @@ S is "Syntelog", which means it has a match to the region. In this case, the mat
 """
 
 import sys
-import numpy as np
 import itertools
 import os.path as op
 from bisect import bisect_left
@@ -51,7 +50,8 @@ def find_synteny_region(query, data, window, cutoff):
         if ib[1]-ia[1] < window: g.join(ia, ib)
 
     for group in sorted(g):
-        if len(group) < cutoff: continue
+        #if len(group) < cutoff: continue
+        if len(set(x[1] for x in group)) < cutoff: continue
         group.sort()
         pos = bisect_left(group, (query, 0))
         if pos == len(group): 
@@ -72,10 +72,12 @@ def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
 
     all_data.sort()
     for seqid, ranks in itertools.groupby(simple_bed(qbed), key=lambda x: x[0]):
-        ranks = (x[1] for x in ranks)
+        ranks = [x[1] for x in ranks]
         for r in ranks:
-            rmin_pos = bisect_left(all_data, (r-window, 0))
-            rmax_pos = bisect_left(all_data, (r+window+1, 0))
+            rmin = max(r-window, ranks[0])
+            rmax = min(r+window+1, ranks[-1])
+            rmin_pos = bisect_left(all_data, (rmin, 0))
+            rmax_pos = bisect_left(all_data, (rmax, 0))
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, data, window, cutoff)
             for pivot, label in regions:
@@ -123,7 +125,7 @@ if __name__ == '__main__':
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
 
-    params_group = optparse.OptionGroup(parser, "BLAST filters")
+    params_group = optparse.OptionGroup(parser, "Synteny parameters")
     params_group.add_option("--window", dest="window", type="int", default=30,
             help="synteny window size [default: %default]")
     params_group.add_option("--cutoff", dest="cutoff", type="int", default=4, 
