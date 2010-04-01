@@ -1,6 +1,8 @@
 """
 Classes to handle the .bed file and .raw file
 """
+# get the gene order given a Bed object
+get_order = lambda bed: dict((f['accn'], (i, f)) for (i, f) in enumerate(bed))
 
 class BedLine(object):
     # the Bed format supports more columns. we only need

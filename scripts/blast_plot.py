@@ -15,9 +15,6 @@ import matplotlib.ticker as ticker
 
 from bed_utils import Bed, BlastLine
 
-# get the gene order given a Bed or Flat object
-get_order = lambda bed: dict((f['accn'], (i, f)) for (i, f) in enumerate(bed))
-
 
 def get_breaks(bed):
     # get chromosome break positions

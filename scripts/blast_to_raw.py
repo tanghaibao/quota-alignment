@@ -26,7 +26,7 @@ import collections
 import itertools
 
 from math import log10
-from bed_utils import Bed, BlastLine
+from bed_utils import Bed, BlastLine, get_order
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
 
@@ -42,9 +42,6 @@ def gene_name(st):
     if st.startswith("Os"):
         return st.rsplit("-",1)[0]
     return st.rsplit(".", 1)[0]
-
-
-get_order = lambda bed: dict((f['accn'], (i, f)) for (i, f) in enumerate(bed))
 
 
 def main(blast_file, options):
