@@ -176,7 +176,7 @@ def write_localdups(dups_fh, tandems, bed):
     return dups_to_mother
 
 
-def write_new_bed(bed, children, is_flat_fmt=False):
+def write_new_bed(bed, children):
     # generate local dup removed annotation files
     out_name = "%s.nolocaldups%s" % op.splitext(bed.filename)
     print >>sys.stderr, "write tandem-filtered bed file %s" % out_name
@@ -277,9 +277,9 @@ if __name__ == "__main__":
 
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--qbed", dest="qbed", 
-            help="path to qbed or qflat")
+            help="path to qbed")
     parser.add_option("--sbed", dest="sbed", 
-            help="path to sbed or sflat")
+            help="path to sbed")
     parser.add_option("--no_strip_names", dest="strip_names", action="store_false", default=True,
             help="do not strip alternative splicing (e.g. At5g06540.1 -> At5g06540)")
 

@@ -106,9 +106,9 @@ if __name__ == "__main__":
 
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--qbed", dest="qbed",
-            help="path to qbed or qflat")
+            help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
-            help="path to sbed or sflat")
+            help="path to sbed")
 
     (options, args) = parser.parse_args()
 

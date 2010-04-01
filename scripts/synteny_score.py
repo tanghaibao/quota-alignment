@@ -119,9 +119,9 @@ if __name__ == '__main__':
 
     parser = optparse.OptionParser(__doc__)
     parser.add_option("--qbed", dest="qbed",
-            help="path to qbed or qflat")
+            help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
-            help="path to sbed or sflat")
+            help="path to sbed")
 
     params_group = optparse.OptionGroup(parser, "BLAST filters")
     params_group.add_option("--window", dest="window", type="int", default=30,
