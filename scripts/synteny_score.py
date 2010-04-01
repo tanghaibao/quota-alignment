@@ -7,13 +7,13 @@
 Given a blast, we find the syntenic regions for every single gene. The algorithm works by expanding the query gene to a window centered on the gene. A single linkage algorithm follows that outputs the synteny block. 
 
 The result looks like the following:
-Os01g0698300    Sb03g032090     S
-Os01g0698500    Sb03g032140     G
+Os01g0698300    Sb03g032090     S    7
+Os01g0698500    Sb03g032140     G    11
 
 The pairs (A, B) -- A is query, and then B is the syntenic region found
 G is "Gray gene", which means it does not have match to the region (fractionated or inserted). In this case, a right flanker is used to represent the region.
 S is "Syntelog", which means it has a match to the region. In this case, the match itself is used to represent the region.
-
+The number in the last column is the synteny score. For the same query, it is ordered with decreasing synteny score.
 """
 
 import sys
@@ -50,18 +50,17 @@ def find_synteny_region(query, data, window, cutoff):
         if ib[1]-ia[1] < window: g.join(ia, ib)
 
     for group in sorted(g):
-        #if len(group) < cutoff: continue
-        if len(set(x[1] for x in group)) < cutoff: continue
+        score = len(set(x[1] for x in group))
+        if score < cutoff: continue
         group.sort()
         pos = bisect_left(group, (query, 0))
-        if pos == len(group): 
-            syn_region = (group[-1], "G")
-        else:
-            flanker = group[pos]
-            syn_region = (flanker, "S") if flanker[0]==query else (flanker, "G")
+
+        flanker = group[-1] if pos==len(group) else group[pos]
+        syn_region = [flanker, "G", score]
+        if flanker[0]==query: syn_region[1] = "S"
         regions.append(syn_region)
 
-    return regions 
+    return sorted(regions, key=lambda x: -x[2]) # decreasing synteny score
 
 
 def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
@@ -80,8 +79,11 @@ def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
             rmax_pos = bisect_left(all_data, (rmax, 0))
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, data, window, cutoff)
-            for pivot, label in regions:
-                print "%s\t%s\t%s" % (qbed[r].accn, sbed[pivot[1]].accn, label)
+            if not regions:
+                print "%s\tna\tna" % (qbed[r].accn)
+            for pivot, label, score in regions:
+                print "%s\t%s\t%s\t%d" % (qbed[r].accn, sbed[pivot[1]].accn, \
+                        label, score)
 
 
 def main(blast_file, options):
