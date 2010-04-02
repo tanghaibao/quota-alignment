@@ -26,7 +26,7 @@ import collections
 import itertools
 
 from math import log10
-from bed_utils import Bed, BlastLine, get_order
+from bed_utils import Bed, BlastLine
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
 
@@ -61,8 +61,8 @@ def main(blast_file, options):
     qbed = Bed(qbed_file)
     sbed = Bed(sbed_file)
 
-    qorder = get_order(qbed) 
-    sorder = get_order(sbed) 
+    qorder = qbed.get_order()
+    sorder = sbed.get_order()
 
     fp = file(blast_file)
     print >>sys.stderr, "read BLAST file %s (total %d lines)" % \
@@ -73,11 +73,16 @@ def main(blast_file, options):
 
     filtered_blasts = []
     seen = set() 
-    for b in blasts:
+    ostrip = options.strip_names
+    for b in (bb for bb in blasts if bb.evalue < 1e-4):
         query, subject = b.query, b.subject
-        if options.strip_names:
+        if ostrip:
             query, subject = gene_name(query), gene_name(subject)
-        if query not in qorder or subject not in sorder: continue
+        if query not in qorder:
+            print >>sys.stderr, "WARNING: %s not in %s" (query, qbed.filename)
+        if subject not in sorder:
+            print >>sys.stderr, "WARNING: %s not in %s" (subject, sbed.filename)
+
         qi, q = qorder[query]
         si, s = sorder[subject]
         
@@ -133,8 +138,17 @@ def main(blast_file, options):
         qbed_new = Bed(qnew_name)
         sbed_new = Bed(snew_name)
 
-        qorder = get_order(qbed_new) 
-        sorder = get_order(sbed_new) 
+        qorder = qbed_new.get_order()
+        sorder = sbed_new.get_order()
+
+    if options.global_density_ratio:
+        print >>sys.stderr, "running the global_density filter" + \
+                "(global_density_ratio=%d)..." % options.global_density_ratio
+        gene_count = len(qorder) + len(sorder)
+        before_filter = len(filtered_blasts)
+        filtered_blasts = filter_to_global_density(filtered_blasts, gene_count,
+                                                  options.global_density_ratio)
+        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 
     if top_N:
         before_filter = len(filtered_blasts)
@@ -205,6 +219,11 @@ def write_new_blast(filtered_blasts, fh=sys.stdout):
 
 # ---------------- All BLAST filters ----------------
 
+def filter_to_global_density(blast_list, gene_count, global_density_ratio):
+    max_hits = int(gene_count * global_density_ratio)
+    print >>sys.stderr, "cutting at:", max_hits
+    return blast_list[:max_hits]
+
 def filter_cscore(blast_list, cscore=.5):
 
     best_score = {}
@@ -242,12 +261,12 @@ def filter_tandem(blast_list, qdups_to_mother, sdups_to_mother):
         mother_blast.append(b)
     
     mother_blast.sort(key=lambda b: b.score, reverse=True)
-    seen = set() 
+    seen = {}
     for b in mother_blast:
         if b.query==b.subject: continue
         key = b.query, b.subject
         if key in seen: continue
-        seen.add(key)
+        seen[key] = None
         yield b
 
 
@@ -290,6 +309,10 @@ if __name__ == "__main__":
             help="retain only top-N hit from BLAST [default: %default]")
     filter_group.add_option("--cscore", type="float", default=None,
             help="retain hits that have good bitscore [default: %default]")
+    filter_group.add_option("--global_density_ratio", type="float", default=None,
+            help="maximum ratio of blast hits to genes a good value is 2. "
+                 "if there are more blasts, only the those with the lowest "
+                 "are kept. [default: %default]")
     
     parser.add_option_group(filter_group)
 
