@@ -120,6 +120,6 @@ if __name__ == "__main__":
 
     blast_file = args[0]
 
-    image_name = "image/" + op.splitext(op.basename(blast_file))[0] + ".png"
+    image_name = op.splitext(blast_file)[0] + ".png"
     dotplot(blast_file, qbed, sbed, image_name)
 
