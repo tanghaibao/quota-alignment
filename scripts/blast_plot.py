@@ -31,8 +31,8 @@ def dotplot(blast_file, qbed, sbed, image_name):
     blasts = [BlastLine(line) for line in blast_fh]
     seen = set()
 
-    qorder = get_order(qbed)
-    sorder = get_order(sbed)
+    qorder = qbed.get_order()
+    sorder = sbed.get_order()
 
     data = []
     for b in blasts:

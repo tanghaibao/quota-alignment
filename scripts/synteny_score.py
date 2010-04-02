@@ -23,7 +23,7 @@ from bisect import bisect_left
 
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
-from bed_utils import Bed, BlastLine, get_order
+from bed_utils import Bed, BlastLine
 
 
 simple_bed = lambda bed: [(b.seqid, i) for (i, b) in enumerate(bed.beds)]
@@ -96,8 +96,8 @@ def main(blast_file, options):
     qbed = Bed(qbed_file)
     sbed = Bed(sbed_file)
 
-    qorder = get_order(qbed)
-    sorder = get_order(sbed)
+    qorder = qbed.get_order()
+    sorder = sbed.get_order()
 
     fp = file(blast_file)
     print >>sys.stderr, "read BLAST file %s (total %d lines)" % \

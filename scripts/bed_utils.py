@@ -51,6 +51,8 @@ class Bed(list):
         for b in self.beds:
             yield b
 
+    def get_order(self):
+        return dict((f.accn, (i, f)) for (i, f) in enumerate(self))
 
 class RawLine(object):
     __slots__ = ("seqid_a", "pos_a", "seqid_b", "pos_b", "score")
