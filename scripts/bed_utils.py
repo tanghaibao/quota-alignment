@@ -39,7 +39,7 @@ class Bed(list):
             beds.append(BedLine(line))
 
         self.seqids = sorted(set(b.seqid for b in beds))
-        self.beds = sorted(beds, key=lambda a: (a.seqid, a.start))
+        self.beds = sorted(beds, key=lambda a: (a.seqid, a.start, a.accn))
 
     def __getitem__(self, i):
         return self.beds[i]

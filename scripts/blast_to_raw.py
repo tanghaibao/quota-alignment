@@ -164,7 +164,7 @@ def write_localdups(dups_fh, tandems, bed):
     for group in tandems:
         rows = [bed[i] for i in group]
         # within the tandem groups, genes are sorted with decreasing size
-        rows.sort(key=lambda a: abs(a['end'] - a['start']), reverse=True)
+        rows.sort(key=lambda a: (-abs(a['end'] - a['start']), a['accn']))
         tandem_groups.append([row['accn'] for row in rows])
 
     dups_to_mother = {}
