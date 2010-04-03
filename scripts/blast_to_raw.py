@@ -74,7 +74,7 @@ def main(blast_file, options):
     filtered_blasts = []
     seen = set() 
     ostrip = options.strip_names
-    for b in (bb for bb in blasts if bb.evalue < 1e-4):
+    for b in blasts:
         query, subject = b.query, b.subject
         if ostrip:
             query, subject = gene_name(query), gene_name(subject)
@@ -101,6 +101,16 @@ def main(blast_file, options):
         b.qseqid, b.sseqid = q['seqid'], s['seqid']
         
         filtered_blasts.append(b)
+
+
+    if options.global_density_ratio:
+        print >>sys.stderr, "running the global_density filter" + \
+                "(global_density_ratio=%d)..." % options.global_density_ratio
+        gene_count = len(qorder) + len(sorder)
+        before_filter = len(filtered_blasts)
+        filtered_blasts = filter_to_global_density(filtered_blasts, gene_count,
+                                                  options.global_density_ratio)
+        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 
     if tandem_Nmax:
         print >>sys.stderr, "running the local dups filter (tandem_Nmax=%d)..." % tandem_Nmax
@@ -140,15 +150,6 @@ def main(blast_file, options):
 
         qorder = qbed_new.get_order()
         sorder = sbed_new.get_order()
-
-    if options.global_density_ratio:
-        print >>sys.stderr, "running the global_density filter" + \
-                "(global_density_ratio=%d)..." % options.global_density_ratio
-        gene_count = len(qorder) + len(sorder)
-        before_filter = len(filtered_blasts)
-        filtered_blasts = filter_to_global_density(filtered_blasts, gene_count,
-                                                  options.global_density_ratio)
-        print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 
     if top_N:
         before_filter = len(filtered_blasts)
@@ -310,7 +311,7 @@ if __name__ == "__main__":
     filter_group.add_option("--cscore", type="float", default=None,
             help="retain hits that have good bitscore [default: %default]")
     filter_group.add_option("--global_density_ratio", type="float", default=None,
-            help="maximum ratio of blast hits to genes a good value is 2. "
+            help="maximum ratio of blast hits to genes a good value is 10. "
                  "if there are more blasts, only the those with the lowest "
                  "are kept. [default: %default]")
     
