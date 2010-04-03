@@ -79,9 +79,11 @@ def main(blast_file, options):
         if ostrip:
             query, subject = gene_name(query), gene_name(subject)
         if query not in qorder:
-            print >>sys.stderr, "WARNING: %s not in %s" (query, qbed.filename)
+            print >>sys.stderr, "WARNING: %s not in %s" % (query, qbed.filename)
+            continue
         if subject not in sorder:
-            print >>sys.stderr, "WARNING: %s not in %s" (subject, sbed.filename)
+            print >>sys.stderr, "WARNING: %s not in %s" % (subject, sbed.filename)
+            continue
 
         qi, q = qorder[query]
         si, s = sorder[subject]
