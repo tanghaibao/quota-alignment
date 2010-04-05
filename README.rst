@@ -107,15 +107,13 @@ Find quota-screened paralogous blocks
 :::::::::::::::::::::::::::::::::::::::::
 First we need to figure out how to get the input data. See the last two sections for preparing data from BLAST and BLASTZ. Then we can do something like the following::
 
-    cluster_utils.py --format=raw grape_grape.raw grape_grape.qa
-    quota_align.py --merge --Dm=20 --min_size=5 --self --quota=2:2 grape_grape.qa
+    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --self --quota=2:2 grape_grape.qa
 
 The reason for setting up ``--quota=2:2`` is because grape has `paleo-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option may be turned on for finding paralogous blocks, when you have reduced the redundancies in your ``.qa`` file (note that self-match is symmetric across diagonal). The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
 
 For a lineage that has tetraploidy event (genome doubling), using the example of brachypodium (which has undergone an ancient pan-grass tetraploidy), we can do::
 
-    cluster_utils.py --format=raw brachy_brachy.raw brachy_brachy.qa
-    quota_align.py --merge --Dm=20 --self --quota=1:1 brachy_brachy.qa
+    quota_align.py --format=raw --merge --Dm=20 --self --quota=1:1 brachy_brachy.qa
 
 Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but we need to ignore the self match. Therefore the rule is when searching paralogous blocks (always do ``--quota=x:x``, where ``x`` is the multiplicity minus 1).
 
@@ -158,7 +156,7 @@ Most annotation groups provide ``.gff`` file (see `gff format <http://genome.ucs
 
     gff_to_bed.py athaliana.gff >athaliana.bed
 
-This will get protein-coding models and put these in the ``.bed`` format. ``.gff`` file must be **gff3-compatible**, otherwise you have to write customized parser. ``.bed`` format is required for doing BLAST filtering, see below.
+This will get protein-coding models and put these in the ``.bed`` format. ``.gff`` file must be **gff3-compatible**, otherwise you have to write customized parser (in fact, this is recommended as most ``.gff`` file for genome projects are not compatible). ``.bed`` format is required for doing BLAST filtering, see below.
 
 BLAST filtering
 ::::::::::::::::::::
@@ -166,13 +164,17 @@ The integer programming solver cannot solve large problem instance (say >60000 v
 
     blast_to_raw.py athaliana_grape.blastp --qbed=athaliana.bed --sbed=grape.bed --tandem_Nmax=10 --cscore=.5
 
-This will convert the BLAST file into the ``.raw`` formatted file that ``quota_align.py`` can understand. For your convenience, several BLAST filters are also implemented in ``blast_to_raw.py``. Notice these BLAST filters are **optional**.
+This will convert the BLAST file into the ``.raw`` formatted file that ``quota_align.py`` can understand (use ``--format=raw``). For your convenience, several BLAST filters are also implemented in ``blast_to_raw.py``. Notice these BLAST filters are **optional**.
 
 - Remove local dups (``--tandem_Nmax=10`` will group the local dups that are within 10 gene distance). When this option is on, ``blast_to_raw.py`` will write new ``.nolocaldups.bed`` file, these will substitute your original ``.bed`` file from now on.
 - Retain top N hits (``--top_N=10`` will keep only the top 10 hits)
 - Use the cscore filtering (``--cscore=.5`` will keep only the hits that have a good score). See reference for cscore in the supplementary of `sea anemone paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>`_. C-score between gene A and B is defined::
 
     cscore(A, B) = score(A, B)/max(best score of A, best score of B)
+
+Typically, after the ``blast_to_raw.py``, we can do the ``quota_align.py`` directly::
+
+    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --quota=1:4 athaliana_grape.raw
 
 Plot dot plot
 :::::::::::::::::::::
