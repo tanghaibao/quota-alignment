@@ -92,28 +92,34 @@ def read_clusters(filename, log_evalue=False, scale=1, fmt="qa"):
     """
     Read cluster info from .qa and .dag file
     """
-    fp = file(filename)
-    clusters = [] 
-    
-    row = fp.readline()
-    j = 1
-    while row:
-        if row.strip() == "": break
-        row = fp.readline()
-        cluster = []
-        while row and row[0] != "#":
-            if row.strip()== "": break
-            anchor = parse_line(row, log_evalue=log_evalue, scale=scale, fmt=fmt)
-            cluster.append(anchor)
-            row = fp.readline()
+    if fmt == "raw":
+        clusters = read_raw(filename)
+    elif fmt == "maf":
+        clusters = read_maf(filename)
+    else:
+        assert fmt in ("qa", "dag"), fmt
 
-        if len(cluster) == 0: continue
-        clusters.append(cluster)
+        fp = file(filename)
+        clusters = []
+
+        row = fp.readline()
+        j = 1
+        while row:
+            if row.strip() == "": break
+            row = fp.readline()
+            cluster = []
+            while row and row[0] != "#":
+                if row.strip()== "": break
+                anchor = parse_line(row, log_evalue=log_evalue, scale=scale, fmt=fmt)
+                cluster.append(anchor)
+                row = fp.readline()
+
+            if len(cluster) == 0: continue
+            clusters.append(cluster)
 
     print >>sys.stderr, "read (%d) clusters in '%s'" % \
             (len(clusters), filename)
-
-    return clusters
+    return sorted(clusters)
 
 
 def write_clusters(filehandle, clusters):
@@ -316,16 +322,8 @@ if __name__ == '__main__':
         sys.exit(parser.print_help())
 
     # file format conversion
-    if options.fmt=="maf":
-        clusters = read_maf(input_file)
-    elif options.fmt=="raw":
-        clusters = read_raw(input_file, log_evalue=options.log_evalue, 
-                scale=options.scale)
-    else:
-        clusters = read_clusters(input_file, log_evalue=options.log_evalue,
-                scale=options.scale, fmt=options.fmt)
-
-    clusters.sort()
+    clusters = read_clusters(input_file, log_evalue=options.log_evalue,
+            scale=options.scale, fmt=options.fmt)
 
     if options.print_grimm:
         print_grimm(clusters)

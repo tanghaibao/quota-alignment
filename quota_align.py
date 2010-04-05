@@ -187,6 +187,9 @@ if __name__ == '__main__':
 
     supported_solvers = ("SCIP", "GLPK")
     other_group = OptionGroup(parser, "Other options")
+    other_group.add_option("--format", dest="format", default="qa",
+            help="one of ('qa', 'raw'). if 'raw' each line is treated as a cluster and should"
+                           " be used with --merge .\n[default: %default]")
     other_group.add_option("--self", dest="self_match",
             action="store_true", default=False,
             help="you might turn this on when screening paralogous blocks, "\
@@ -225,7 +228,7 @@ if __name__ == '__main__':
 
     self_match = options.self_match
 
-    clusters = read_clusters(qa_file)
+    clusters = read_clusters(qa_file, fmt=options.format)
     for cluster in clusters:
         assert len(cluster) > 0
 
