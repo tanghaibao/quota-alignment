@@ -18,7 +18,7 @@ from bed_utils import Bed, BlastLine
 
 def get_breaks(bed):
     # get chromosome break positions
-    simple_bed = [(b.seqid, i) for (i, b) in enumerate(bed.beds)]
+    simple_bed = bed.get_simple_bed()
     for seqid, ranks in itertools.groupby(simple_bed, key=lambda x:x[0]):
         ranks = list(ranks)
         # chromosome, extent of the chromosome

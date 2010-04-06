@@ -26,8 +26,6 @@ from grouper import Grouper
 from bed_utils import Bed, BlastLine
 
 
-simple_bed = lambda bed: [(b.seqid, i) for (i, b) in enumerate(bed.beds)]
-
 def transposed(data):
     x, y = zip(*data)
     return zip(y, x)
@@ -70,7 +68,7 @@ def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
         qbed, sbed = sbed, qbed
 
     all_data.sort()
-    for seqid, ranks in itertools.groupby(simple_bed(qbed), key=lambda x: x[0]):
+    for seqid, ranks in itertools.groupby(qbed.get_simple_bed(), key=lambda x: x[0]):
         ranks = [x[1] for x in ranks]
         for r in ranks:
             rmin = max(r-window, ranks[0])
