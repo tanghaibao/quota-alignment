@@ -167,7 +167,10 @@ The integer programming solver cannot solve large problem instance (say >60000 v
 This will convert the BLAST file into the ``.raw`` formatted file that ``quota_align.py`` can understand (use ``--format=raw``). For your convenience, several BLAST filters are also implemented in ``blast_to_raw.py``. Notice these BLAST filters are **optional**.
 
 - Remove local dups (``--tandem_Nmax=10`` will group the local dups that are within 10 gene distance). When this option is on, ``blast_to_raw.py`` will write new ``.nolocaldups.bed`` file, these will substitute your original ``.bed`` file from now on.
-- Retain top N hits (``--top_N=10`` will keep only the top 10 hits)
+- Remove repetitive matches. For genes that have many hits, we will adjust the evalue::
+    
+    adjusted_evalue(A, B) = evalue(A, B) ** ((counts_of_blast / counts_of_genes) / (counts(A) + counts(B)))
+
 - Use the cscore filtering (``--cscore=.5`` will keep only the hits that have a good score). See reference for cscore in the supplementary of `sea anemone paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>`_. C-score between gene A and B is defined::
 
     cscore(A, B) = score(A, B)/max(best score of A, best score of B)

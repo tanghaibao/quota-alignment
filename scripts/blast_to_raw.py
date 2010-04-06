@@ -10,8 +10,10 @@ and a blast file.
 local dup filter:
 if the input is query.bed and subject.bed, the script files query.localdups and subject.localdups are created containing the parent|offspring dups, as inferred by subjects hitting the same query or queries hitting the same subject.
 
-top N filter:
-just returns the best N hits given a query or subject
+repeat filter:
+adjust the evalues in a dagchainer/blast file by the number of times they occur.
+query/subjects that appear often will have the evalues raise (made less significant).
+adjusted_evalue(A, B) = evalue(A, B) ** ((counts_of_blast / counts_of_genes) / (counts(A) + counts(B)))
 
 cscore filter:
 see supplementary info for sea anemone genome paper <http://www.sciencemag.org/cgi/content/abstract/317/5834/86>, formula below
@@ -53,8 +55,9 @@ def main(blast_file, options):
     if is_self:
         print >>sys.stderr, "... looks like a self-self BLAST to me"
     
+    global_density_ratio = options.global_density_ratio
     tandem_Nmax = options.tandem_Nmax
-    top_N = options.top_N
+    filter_repeats = options.filter_repeats
     cscore = options.cscore
 
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
@@ -109,13 +112,13 @@ def main(blast_file, options):
         filtered_blasts.append(b)
 
 
-    if options.global_density_ratio:
+    if global_density_ratio:
         print >>sys.stderr, "running the global_density filter" + \
                 "(global_density_ratio=%d)..." % options.global_density_ratio
         gene_count = len(qorder) + len(sorder)
         before_filter = len(filtered_blasts)
         filtered_blasts = filter_to_global_density(filtered_blasts, gene_count,
-                                                  options.global_density_ratio)
+                                                   global_density_ratio)
         print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 
     if tandem_Nmax:
@@ -157,10 +160,10 @@ def main(blast_file, options):
         qorder = qbed_new.get_order()
         sorder = sbed_new.get_order()
 
-    if top_N:
+    if filter_repeats:
         before_filter = len(filtered_blasts)
-        print >>sys.stderr, "running the top-N filter (top_N=%d)..." % top_N
-        filtered_blasts = list(filter_top_n(filtered_blasts, top_N=top_N))
+        print >>sys.stderr, "running the repeat filter", 
+        filtered_blasts = list(filter_repeat(filtered_blasts))
         print >>sys.stderr, "after filter (%d->%d)..." % (before_filter, len(filtered_blasts))
 
     if cscore:
@@ -246,18 +249,26 @@ def filter_cscore(blast_list, cscore=.5):
             yield b
 
 
-def filter_top_n(blast_list, top_N=10):
+def filter_repeat(blast_list, evalue_cutoff=.05):
+    """
+    adjust the evalues in a dagchainer/blast file by the number of times they occur.
+    query/subjects that appear often will have the evalues raise (made less
+    significant).
+    """
+    counts = collections.defaultdict(int)
+    for b in blast_list:
+        counts[b.query] += 1
+        counts[b.subject] += 1
 
-    q_hits = collections.defaultdict(int)
-    s_hits = collections.defaultdict(int)
-    top_N *= 2
+    expected_count = len(blast_list) * 1. / len(counts)
+    print >>sys.stderr, "(expected_count=%d)..." % expected_count
 
     for b in blast_list:
-        q_hits[b.query] += 1
-        s_hits[b.subject] += 1
-        if q_hits[b.query] + s_hits[b.subject] > top_N: continue
-        yield b
-    
+        count = counts[b.query] + counts[b.subject]
+        adjusted_evalue = b.evalue ** (expected_count / count)
+
+        if adjusted_evalue < evalue_cutoff: yield b
+
 
 def filter_tandem(blast_list, qdups_to_mother, sdups_to_mother):
     
@@ -312,8 +323,8 @@ if __name__ == "__main__":
     filter_group = optparse.OptionGroup(parser, "BLAST filters")
     filter_group.add_option("--tandem_Nmax", dest="tandem_Nmax", type="int", default=None, 
             help="merge tandem genes within distance [default: %default]")
-    filter_group.add_option("--top_N", dest="top_N", type="int", default=None,
-            help="retain only top-N hit from BLAST [default: %default]")
+    filter_group.add_option("--filter_repeats", dest="filter_repeats", action="store_true", default=False,
+            help="require higher e-value for repetitive matches BLAST.")
     filter_group.add_option("--cscore", type="float", default=None,
             help="retain hits that have good bitscore [default: %default]")
     filter_group.add_option("--global_density_ratio", type="float", default=None,
