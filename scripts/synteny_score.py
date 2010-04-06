@@ -24,6 +24,7 @@ from bisect import bisect_left
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
 from bed_utils import Bed, BlastLine
+from lis import longest_increasing_subsequence, longest_decreasing_subsequence
 
 
 def transposed(data):
@@ -48,13 +49,29 @@ def find_synteny_region(query, data, window, cutoff):
         if ib[1]-ia[1] < window: g.join(ia, ib)
 
     for group in sorted(g):
-        score = len(set(x[1] for x in group))
-        if score < cutoff: continue
+        
         group.sort()
+        y_indexed_group = [(y, i) for i, (x, y) in enumerate(group)]
+
+        # run a mini-dagchainer here, take the direction that gives us most anchors 
+        lis = longest_increasing_subsequence(y_indexed_group)
+        lds = longest_decreasing_subsequence(y_indexed_group)
+        
+        lis_len, lds_len = len(lis), len(lds)
+        if lis_len >= lds_len: 
+            score = lis_len
+            group = [group[i] for y, i in lis]
+            orientation = "+"
+        else:
+            score = lds_len
+            group = [group[i] for y, i in lds]
+            orientation = "-"
+
+        if score < cutoff: continue
         pos = bisect_left(group, (query, 0))
 
         flanker = group[-1] if pos==len(group) else group[pos]
-        syn_region = [flanker, "G", score]
+        syn_region = [flanker, "G", score, orientation]
         if flanker[0]==query: syn_region[1] = "S"
         regions.append(syn_region)
 
@@ -78,10 +95,10 @@ def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, data, window, cutoff)
             if not regions:
-                print "%s\tna\tna" % (qbed[r].accn)
-            for pivot, label, score in regions:
-                print "%s\t%s\t%s\t%d" % (qbed[r].accn, sbed[pivot[1]].accn, \
-                        label, score)
+                print "%s\tna\tna\tna" % (qbed[r].accn)
+            for pivot, label, score, orientation in regions:
+                print "%s\t%s\t%s\t%d\t%s" % (qbed[r].accn, sbed[pivot[1]].accn, \
+                        label, score, orientation)
 
 
 def main(blast_file, options):
