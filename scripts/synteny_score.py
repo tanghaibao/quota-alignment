@@ -68,7 +68,9 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
                 group = [group[i] for y, i in lds]
                 orientation = "-"
         else:
-            score = len(set(x[1] for x in group))
+            xpos, ypos = zip(*group)
+            # get the number of unique positions
+            score = min(len(set(xpos)), len(set(ypos)))
 
         if score < cutoff: continue
 
