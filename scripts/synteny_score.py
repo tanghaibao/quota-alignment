@@ -7,13 +7,13 @@
 Given a blast, we find the syntenic regions for every single gene. The algorithm works by expanding the query gene to a window centered on the gene. A single linkage algorithm follows that outputs the synteny block. 
 
 The result looks like the following:
-Os01g0698300    Sb03g032090     S    7
-Os01g0698500    Sb03g032140     G    11
+Os01g0698300    Sb03g032090     S    7     +
+Os01g0698500    Sb03g032140     G    11    +
 
 The pairs (A, B) -- A is query, and then B is the syntenic region found
 G is "Gray gene", which means it does not have match to the region (fractionated or inserted). In this case, a right flanker is used to represent the region.
 S is "Syntelog", which means it has a match to the region. In this case, the match itself is used to represent the region.
-The number in the last column is the synteny score. For the same query, it is ordered with decreasing synteny score.
+The number in the 4th column is the synteny score. For the same query, it is ordered with decreasing synteny score. The last column means orientation. "+" is same direction.
 """
 
 import sys
@@ -72,13 +72,16 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
             # get the number of unique positions
             score = min(len(set(xpos)), len(set(ypos)))
 
-        if score < cutoff: continue
-
         pos = bisect_left(group, (query, 0))
         flanker = group[-1] if pos==len(group) else group[pos]
-        syn_region = [flanker, "G", score, orientation]
-        if flanker[0]==query: syn_region[1] = "S"
-        regions.append(syn_region)
+        gray_gene = "G"
+        if flanker[0]==query: 
+            gray_gene = "S"
+            score += 1 # extra bonus for finding syntelog
+
+        if score >= cutoff: 
+            syn_region = [flanker, gray_gene, score, orientation]
+            regions.append(syn_region)
 
     return sorted(regions, key=lambda x: -x[2]) # decreasing synteny score
 
@@ -149,7 +152,7 @@ if __name__ == '__main__':
             help="path to sbed")
 
     params_group = optparse.OptionGroup(parser, "Synteny parameters")
-    params_group.add_option("--window", dest="window", type="int", default=30,
+    params_group.add_option("--window", dest="window", type="int", default=20,
             help="synteny window size [default: %default]")
     params_group.add_option("--cutoff", dest="cutoff", type="int", default=4, 
             help="the minimum number of anchors to call synteny [default: %default]")
