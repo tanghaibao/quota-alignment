@@ -32,7 +32,7 @@ def transposed(data):
     return zip(y, x)
 
 
-def find_synteny_region(query, data, window, cutoff):
+def find_synteny_region(query, data, window, cutoff, colinear=False):
     # get all synteny blocks for a query, algorithm is single linkage
     # anchors are a window centered on query 
     # two categories of syntenic regions depending on what query is:
@@ -51,25 +51,28 @@ def find_synteny_region(query, data, window, cutoff):
     for group in sorted(g):
         
         group.sort()
-        y_indexed_group = [(y, i) for i, (x, y) in enumerate(group)]
+        orientation = "+"
 
         # run a mini-dagchainer here, take the direction that gives us most anchors 
-        lis = longest_increasing_subsequence(y_indexed_group)
-        lds = longest_decreasing_subsequence(y_indexed_group)
-        
-        lis_len, lds_len = len(lis), len(lds)
-        if lis_len >= lds_len: 
-            score = lis_len
-            group = [group[i] for y, i in lis]
-            orientation = "+"
+        if colinear:
+            y_indexed_group = [(y, i) for i, (x, y) in enumerate(group)]
+            lis = longest_increasing_subsequence(y_indexed_group)
+            lds = longest_decreasing_subsequence(y_indexed_group)
+            
+            lis_len, lds_len = len(lis), len(lds)
+            if lis_len >= lds_len: 
+                score = lis_len
+                group = [group[i] for y, i in lis]
+            else:
+                score = lds_len
+                group = [group[i] for y, i in lds]
+                orientation = "-"
         else:
-            score = lds_len
-            group = [group[i] for y, i in lds]
-            orientation = "-"
+            score = len(set(x[1] for x in group))
 
         if score < cutoff: continue
-        pos = bisect_left(group, (query, 0))
 
+        pos = bisect_left(group, (query, 0))
         flanker = group[-1] if pos==len(group) else group[pos]
         syn_region = [flanker, "G", score, orientation]
         if flanker[0]==query: syn_region[1] = "S"
@@ -78,7 +81,7 @@ def find_synteny_region(query, data, window, cutoff):
     return sorted(regions, key=lambda x: -x[2]) # decreasing synteny score
 
 
-def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
+def batch_query(qbed, sbed, all_data, window, cutoff, colinear=False, transpose=False):
     # process all genes present in the bed file 
     if transpose: 
         all_data = transposed(all_data)
@@ -93,7 +96,7 @@ def batch_query(qbed, sbed, all_data, window, cutoff, transpose=False):
             rmin_pos = bisect_left(all_data, (rmin, 0))
             rmax_pos = bisect_left(all_data, (rmax, 0))
             data = all_data[rmin_pos:rmax_pos]
-            regions = find_synteny_region(r, data, window, cutoff)
+            regions = find_synteny_region(r, data, window, cutoff, colinear=colinear)
             if not regions:
                 print "%s\tna\tna\tna" % (qbed[r].accn)
             for pivot, label, score, orientation in regions:
@@ -106,6 +109,7 @@ def main(blast_file, options):
     
     window = options.window
     cutoff = options.cutoff
+    colinear = options.colinear
 
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
     qbed = Bed(qbed_file)
@@ -129,8 +133,8 @@ def main(blast_file, options):
         si, s = sorder[subject]
         all_data.append((qi, si))
 
-    batch_query(qbed, sbed, all_data, window, cutoff, transpose=False)
-    batch_query(qbed, sbed, all_data, window, cutoff, transpose=True)
+    batch_query(qbed, sbed, all_data, window, cutoff, colinear=colinear, transpose=False)
+    batch_query(qbed, sbed, all_data, window, cutoff, colinear=colinear, transpose=True)
 
 
 if __name__ == '__main__':
@@ -147,6 +151,8 @@ if __name__ == '__main__':
             help="synteny window size [default: %default]")
     params_group.add_option("--cutoff", dest="cutoff", type="int", default=4, 
             help="the minimum number of anchors to call synteny [default: %default]")
+    params_group.add_option("--nocolinear", dest="colinear", action="store_false",
+            default=True, help="don't expect collinearity? [default: collinear regions]")
 
     parser.add_option_group(params_group)
 
