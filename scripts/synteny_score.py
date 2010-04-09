@@ -17,6 +17,7 @@ The number in the 4th column is the synteny score. For the same query, it is ord
 """
 
 import sys
+import sqlite3
 import itertools
 import os.path as op
 from bisect import bisect_left
@@ -86,11 +87,17 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
     return sorted(regions, key=lambda x: -x[2]) # decreasing synteny score
 
 
-def batch_query(qbed, sbed, all_data, window, cutoff, colinear=False, transpose=False):
+def batch_query(qbed, sbed, all_data, window, cutoff, 
+        sqlite=False, colinear=False, transpose=False):
     # process all genes present in the bed file 
     if transpose: 
         all_data = transposed(all_data)
         qbed, sbed = sbed, qbed
+    if sqlite:
+        conn = sqlite3.connect("data.db")
+        c = conn.cursor()
+        c.execute("drop table if exists synteny")
+        c.execute("create table synteny (query text, anchor text, gray text, score real, orientation text)")
 
     all_data.sort()
     for seqid, ranks in itertools.groupby(qbed.get_simple_bed(), key=lambda x: x[0]):
@@ -103,10 +110,18 @@ def batch_query(qbed, sbed, all_data, window, cutoff, colinear=False, transpose=
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, data, window, cutoff, colinear=colinear)
             if not regions:
-                print "%s\tna\tna\tna" % (qbed[r].accn)
-            for pivot, label, score, orientation in regions:
-                print "%s\t%s\t%s\t%d\t%s" % (qbed[r].accn, sbed[pivot[1]].accn, \
-                        label, score, orientation)
+                print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*4))
+            for pivot, gray, score, orientation in regions:
+                query, anchor = qbed[r].accn, sbed[pivot[1]].accn
+                data = (query, anchor, gray, score, orientation)
+                print "%s\t%s\t%s\t%d\t%s" % data 
+                if sqlite:
+                    c.execute("insert into synteny values ('%s', '%s', '%s', %d, '%s')" % data)
+
+    if sqlite:
+        c.execute("create index q on synteny (query)")
+        conn.commit()
+        c.close()
 
 
 def main(blast_file, options):
@@ -114,6 +129,7 @@ def main(blast_file, options):
     
     window = options.window
     cutoff = options.cutoff
+    sqlite = options.sqlite
     colinear = options.colinear
 
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
@@ -138,8 +154,10 @@ def main(blast_file, options):
         si, s = sorder[subject]
         all_data.append((qi, si))
 
-    batch_query(qbed, sbed, all_data, window, cutoff, colinear=colinear, transpose=False)
-    batch_query(qbed, sbed, all_data, window, cutoff, colinear=colinear, transpose=True)
+    batch_query(qbed, sbed, all_data, window, cutoff, 
+            sqlite=sqlite, colinear=colinear, transpose=False)
+    batch_query(qbed, sbed, all_data, window, cutoff, 
+            sqlite=sqlite, colinear=colinear, transpose=True)
 
 
 if __name__ == '__main__':
@@ -150,6 +168,8 @@ if __name__ == '__main__':
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
+    parser.add_option("--sqlite", dest="sqlite", action="store_true", default=False,
+            help="write sqlite database")
 
     params_group = optparse.OptionGroup(parser, "Synteny parameters")
     params_group.add_option("--window", dest="window", type="int", default=20,
