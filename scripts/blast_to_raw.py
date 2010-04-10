@@ -177,7 +177,7 @@ def main(blast_file, options):
     raw_fh = open(raw_name, "w")
 
     write_raw(qorder, sorder, filtered_blasts, raw_fh)
-    #write_new_blast(filtered_blasts) 
+    write_new_blast(filtered_blasts) 
 
 
 def write_localdups(dups_fh, tandems, bed):
