@@ -47,7 +47,7 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
     a, b = itertools.tee(ysorted)
     next(b, None)
     for ia, ib in itertools.izip(a, b):
-        if ib[1]-ia[1] < window: g.join(ia, ib)
+        if ib[1]-ia[1] < window/2: g.join(ia, ib)
 
     for group in sorted(g):
         
@@ -70,36 +70,51 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
                 orientation = "-"
         else:
             xpos, ypos = zip(*group)
-            # get the number of unique positions
             score = min(len(set(xpos)), len(set(ypos)))
 
         pos = bisect_left(group, (query, 0))
-        flanker = group[-1] if pos==len(group) else group[pos]
-        gray_gene = "G"
-        if flanker[0]==query: 
-            gray_gene = "S"
+        left_flanker = group[0] if pos==0 else group[pos-1]
+        right_flanker = group[-1] if pos==len(group) else group[pos] 
+
+        # pick the closest flanker
+        if abs(query - left_flanker[0]) < abs(query - right_flanker[0]):
+            flanker = left_flanker
+        else:
+            flanker = right_flanker
+
+        qflanker, syntelog = flanker
+        if qflanker==query: 
+            gray = "S"
             score += 1 # extra bonus for finding syntelog
+        else:
+            gray = "G"
 
-        if score >= cutoff: 
-            syn_region = [flanker, gray_gene, score, orientation]
-            regions.append(syn_region)
+        if score < cutoff: continue
 
-    return sorted(regions, key=lambda x: -x[2]) # decreasing synteny score
+        # y-boundary of the block
+        left, right = group[0][1], group[-1][1]
+        # this characterizes a syntenic region (left, right). syntelog is -1 if it's a gray gene
+        syn_region = (syntelog, left, right, gray, orientation, score)
+        regions.append(syn_region)
+
+    return sorted(regions, key=lambda x: -x[-1]) # decreasing synteny score
 
 
-def batch_query(qbed, sbed, all_data, window, cutoff, 
-        sqlite=False, colinear=False, transpose=False):
+def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
+
+    window = options.window
+    cutoff = options.cutoff
+    sqlite = options.sqlite
+    colinear = options.colinear
+
     # process all genes present in the bed file 
     if transpose: 
         all_data = transposed(all_data)
         qbed, sbed = sbed, qbed
-    if sqlite:
-        conn = sqlite3.connect("data.db")
-        c = conn.cursor()
-        c.execute("drop table if exists synteny")
-        c.execute("create table synteny (query text, anchor text, gray text, score real, orientation text)")
 
     all_data.sort()
+    simple_bed = lambda x: (sbed[x].seqid, sbed[x].start)
+    
     for seqid, ranks in itertools.groupby(qbed.get_simple_bed(), key=lambda x: x[0]):
         ranks = [x[1] for x in ranks]
         for r in ranks:
@@ -111,27 +126,29 @@ def batch_query(qbed, sbed, all_data, window, cutoff,
             regions = find_synteny_region(r, data, window, cutoff, colinear=colinear)
             if not regions:
                 print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*4))
-            for pivot, gray, score, orientation in regions:
-                query, anchor = qbed[r].accn, sbed[pivot[1]].accn
-                data = (query, anchor, gray, score, orientation)
-                print "%s\t%s\t%s\t%d\t%s" % data 
-                if sqlite:
-                    c.execute("insert into synteny values ('%s', '%s', '%s', %d, '%s')" % data)
+            for syntelog, left, right, gray, orientation, score in regions:
+                query = qbed[r].accn
 
-    if sqlite:
-        c.execute("create index q on synteny (query)")
-        conn.commit()
-        c.close()
+                left_chr, left_pos = simple_bed(left)
+                right_chr, right_pos = simple_bed(right)
+
+                anchor = sbed[syntelog].accn
+                anchor_chr, anchor_pos = simple_bed(syntelog)
+                # below is useful for generating the syntenic region in the coge url
+                left_dist = abs(anchor_pos - left_pos) if anchor_chr==left_chr else 0
+                right_dist = abs(anchor_pos - right_pos) if anchor_chr==right_chr else 0
+                flank_dist = (max(left_dist, right_dist) / 10000 + 1) * 10000
+
+                data = (query, anchor, flank_dist, gray, orientation, score)
+                print "\t".join(map(str, data))
+                if sqlite:
+                    c.execute("insert into synteny values ('%s', '%s', %d, '%s', '%s', %d)" % data)
 
 
 def main(blast_file, options):
     qbed_file, sbed_file = options.qbed, options.sbed
-    
-    window = options.window
-    cutoff = options.cutoff
     sqlite = options.sqlite
-    colinear = options.colinear
-
+    
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
     qbed = Bed(qbed_file)
     sbed = Bed(sbed_file)
@@ -154,10 +171,20 @@ def main(blast_file, options):
         si, s = sorder[subject]
         all_data.append((qi, si))
 
-    batch_query(qbed, sbed, all_data, window, cutoff, 
-            sqlite=sqlite, colinear=colinear, transpose=False)
-    batch_query(qbed, sbed, all_data, window, cutoff, 
-            sqlite=sqlite, colinear=colinear, transpose=True)
+    c = None
+    if options.sqlite:
+        conn = sqlite3.connect(op.basename(blast_file).split(".")[0] + ".db")
+        c = conn.cursor()
+        c.execute("drop table if exists synteny")
+        c.execute("create table synteny (query text, anchor text, dr integer, gray text, score integer, orientation text)")
+
+    batch_query(qbed, sbed, all_data, options, c=c, transpose=False)
+    batch_query(qbed, sbed, all_data, options, c=c, transpose=True)
+
+    if sqlite:
+        c.execute("create index q on synteny (query)")
+        conn.commit()
+        c.close()
 
 
 if __name__ == '__main__':
@@ -174,7 +201,7 @@ if __name__ == '__main__':
     params_group = optparse.OptionGroup(parser, "Synteny parameters")
     params_group.add_option("--window", dest="window", type="int", default=20,
             help="synteny window size [default: %default]")
-    params_group.add_option("--cutoff", dest="cutoff", type="int", default=4, 
+    params_group.add_option("--cutoff", dest="cutoff", type="int", default=5, 
             help="the minimum number of anchors to call synteny [default: %default]")
     params_group.add_option("--nocolinear", dest="colinear", action="store_false",
             default=True, help="don't expect collinearity? [default: collinear regions]")
