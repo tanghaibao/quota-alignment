@@ -125,7 +125,7 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, data, window, cutoff, colinear=colinear)
             if not regions:
-                print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*4))
+                print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*5))
             for syntelog, left, right, gray, orientation, score in regions:
                 query = qbed[r].accn
 
