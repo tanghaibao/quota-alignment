@@ -107,13 +107,13 @@ Find quota-screened paralogous blocks
 :::::::::::::::::::::::::::::::::::::::::
 First we need to figure out how to get the input data. See the last two sections for preparing data from BLAST and BLASTZ. Then we can do something like the following::
 
-    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --self --quota=2:2 grape_grape.qa
+    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --self --quota=2:2 grape_grape.raw
 
 The reason for setting up ``--quota=2:2`` is because grape has `paleo-hexaploidy event <http://www.nature.com/nature/journal/v449/n7161/full/nature06148.html>`_. Therefore many regions will have 3 copies, but we need to remove the self match. Therefore we should do ``2:2`` instead. ``--self`` option may be turned on for finding paralogous blocks, when you have reduced the redundancies in your ``.qa`` file (note that self-match is symmetric across diagonal). The reason for that is in the self-matching case, the constraints on the union of the constraints on **both** axis, rather than on each axis separately. 
 
 For a lineage that has tetraploidy event (genome doubling), using the example of brachypodium (which has undergone an ancient pan-grass tetraploidy), we can do::
 
-    quota_align.py --format=raw --merge --Dm=20 --self --quota=1:1 brachy_brachy.qa
+    quota_align.py --format=raw --merge --Dm=20 --self --quota=1:1 brachy_brachy.raw
 
 Note in this case, ``--quota=1:1`` since we have most regions in 2 copies, but we need to ignore the self match. Therefore the rule is when searching paralogous blocks (always do ``--quota=x:x``, where ``x`` is the multiplicity minus 1).
 
@@ -189,6 +189,10 @@ This will generate a dot plot that you can stare to spot any problem. Below is a
 
 .. image:: http://lh3.ggpht.com/_srvRoIok9Xs/S6gz7Plyw-I/AAAAAAAAA2s/koz29tPJt8M/s800/athaliana_grape.qa.png 
     :alt: sample dotplot
+
+The result of quota-based screening can be compared to the raw blast result. Using the ``blast_plot.py`` in ``script`` folder. The syntax is similar to ``qa_plot``, only on differernt input format::
+
+    blast_plot.py --qbed=athaliana.bed --sbed=grape.bed athaliana_grape.blastp
 
 
 Reference
