@@ -102,10 +102,10 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
 
 def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
 
-    window = options.window
-    cutoff = options.cutoff
+    cutoff = int(options.cutoff * options.window)
+    window = options.window / 2
     sqlite = options.sqlite
-    colinear = options.colinear
+    colinear = (options.scoring=="collinear")
 
     # process all genes present in the bed file 
     if transpose: 
@@ -139,10 +139,10 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
                 right_dist = abs(anchor_pos - right_pos) if anchor_chr==right_chr else 0
                 flank_dist = (max(left_dist, right_dist) / 10000 + 1) * 10000
 
-                data = (query, anchor, flank_dist, gray, orientation, score)
+                data = (query, anchor, gray, score, flank_dist, orientation)
                 print "\t".join(map(str, data))
                 if sqlite:
-                    c.execute("insert into synteny values ('%s', '%s', %d, '%s', '%s', %d)" % data)
+                    c.execute("insert into synteny values (?,?,?,?,?,?)", data)
 
 
 def main(blast_file, options):
@@ -173,10 +173,10 @@ def main(blast_file, options):
 
     c = None
     if options.sqlite:
-        conn = sqlite3.connect(op.basename(blast_file).split(".")[0] + ".db")
+        conn = sqlite3.connect(options.sqlite)
         c = conn.cursor()
         c.execute("drop table if exists synteny")
-        c.execute("create table synteny (query text, anchor text, dr integer, gray text, score integer, orientation text)")
+        c.execute("create table synteny (query integer, anchor text, gray varchar(1), score integer, dr integer, orientation varchar(1))")
 
     batch_query(qbed, sbed, all_data, options, c=c, transpose=False)
     batch_query(qbed, sbed, all_data, options, c=c, transpose=True)
@@ -195,16 +195,17 @@ if __name__ == '__main__':
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
-    parser.add_option("--sqlite", dest="sqlite", action="store_true", default=False,
+    parser.add_option("--sqlite", dest="sqlite", default=None,
             help="write sqlite database")
 
     params_group = optparse.OptionGroup(parser, "Synteny parameters")
-    params_group.add_option("--window", dest="window", type="int", default=20,
+    params_group.add_option("--window", dest="window", type="int", default=40,
             help="synteny window size [default: %default]")
-    params_group.add_option("--cutoff", dest="cutoff", type="int", default=5, 
+    params_group.add_option("--cutoff", dest="cutoff", type="float", default=.1, 
             help="the minimum number of anchors to call synteny [default: %default]")
-    params_group.add_option("--nocolinear", dest="colinear", action="store_false",
-            default=True, help="don't expect collinearity? [default: collinear regions]")
+    supported_scoring = ("collinear", "density")
+    params_group.add_option("--scoring", dest="scoring", choices=supported_scoring, default="collinear",
+            help="scoring scheme, must be one of " + str(supported_scoring) +" [default: %default]")
 
     parser.add_option_group(params_group)
 
