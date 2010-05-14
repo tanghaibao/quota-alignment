@@ -48,11 +48,14 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
     next(b, None)
     for ia, ib in itertools.izip(a, b):
         if ib[1]-ia[1] < window: g.join(ia, ib)
+    #print list(g)
 
     for group in sorted(g):
         
         group.sort()
-        orientation = "+"
+        pos = bisect_left(group, (query, 0))
+        left_flanker = group[0] if pos==0 else group[pos-1]
+        right_flanker = group[-1] if pos==len(group) else group[pos] 
 
         # run a mini-dagchainer here, take the direction that gives us most anchors 
         if colinear:
@@ -60,22 +63,18 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
             lis = longest_increasing_subsequence(y_indexed_group)
             lds = longest_decreasing_subsequence(y_indexed_group)
             
-            lis_len, lds_len = len(lis), len(lds)
-            if lis_len >= lds_len: 
-                score = lis_len
-                group = [group[i] for (y, i) in lis]
+            if len(lis) >= len(lds): 
+                track = lis
+                orientation = "+"
             else:
-                score = lds_len
-                group = [group[i] for (y, i) in lds]
+                track = lds
                 orientation = "-"
-        else:
-            xpos, ypos = zip(*group)
-            score = min(len(set(xpos)), len(set(ypos)))
 
-        group.sort()
-        pos = bisect_left(group, (query, 0))
-        left_flanker = group[0] if pos==0 else group[pos-1]
-        right_flanker = group[-1] if pos==len(group) else group[pos] 
+        group = [group[i] for (y, i) in track]
+        xpos, ypos = zip(*group)
+        score = min(len(set(xpos)), len(set(ypos)))
+
+        if score < cutoff: continue
 
         # pick the closest flanker
         if abs(query - left_flanker[0]) < abs(query - right_flanker[0]):
@@ -86,11 +85,9 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
         qflanker, syntelog = flanker
         if qflanker==query: 
             gray = "S"
-            score += 1 # extra bonus for finding syntelog
         else:
             gray = "G"
-
-        if score < cutoff: continue
+            score -= 1 # slight penalty for not finding syntelog
 
         # y-boundary of the block
         left, right = group[0][1], group[-1][1]
@@ -125,8 +122,8 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
             rmax_pos = bisect_left(all_data, (rmax, 0))
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, data, window, cutoff, colinear=colinear)
-            if not regions:
-                print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*5))
+            #if not regions:
+            #    print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*5))
             for syntelog, left, right, gray, orientation, score in regions:
                 query = qbed[r].accn
 
@@ -140,10 +137,12 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
                 right_dist = abs(anchor_pos - right_pos) if anchor_chr==right_chr else 0
                 flank_dist = (max(left_dist, right_dist) / 10000 + 1) * 10000
 
+                query = int(query.split("||")[-2])
                 data = (query, anchor, gray, score, flank_dist, orientation)
-                print "\t".join(map(str, data))
                 if sqlite:
                     c.execute("insert into synteny values (?,?,?,?,?,?)", data)
+                else:
+                    print "\t".join(map(str, data))
 
 
 def main(blast_file, options):
