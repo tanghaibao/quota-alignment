@@ -47,7 +47,7 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
     a, b = itertools.tee(ysorted)
     next(b, None)
     for ia, ib in itertools.izip(a, b):
-        if ib[1]-ia[1] < window/2: g.join(ia, ib)
+        if ib[1]-ia[1] < window: g.join(ia, ib)
 
     for group in sorted(g):
         
@@ -63,15 +63,16 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
             lis_len, lds_len = len(lis), len(lds)
             if lis_len >= lds_len: 
                 score = lis_len
-                group = [group[i] for y, i in lis]
+                group = [group[i] for (y, i) in lis]
             else:
                 score = lds_len
-                group = [group[i] for y, i in lds]
+                group = [group[i] for (y, i) in lds]
                 orientation = "-"
         else:
             xpos, ypos = zip(*group)
             score = min(len(set(xpos)), len(set(ypos)))
 
+        group.sort()
         pos = bisect_left(group, (query, 0))
         left_flanker = group[0] if pos==0 else group[pos-1]
         right_flanker = group[-1] if pos==len(group) else group[pos] 
