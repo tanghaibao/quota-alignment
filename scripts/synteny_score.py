@@ -70,7 +70,8 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
                 track = lds
                 orientation = "-"
 
-        group = [group[i] for (y, i) in track]
+            group = [group[i] for (y, i) in track]
+
         xpos, ypos = zip(*group)
         score = min(len(set(xpos)), len(set(ypos)))
 
