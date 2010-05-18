@@ -177,7 +177,7 @@ def main(blast_file, options):
         conn = sqlite3.connect(options.sqlite)
         c = conn.cursor()
         c.execute("drop table if exists synteny")
-        c.execute("create table synteny (query integer, anchor text, gray varchar(1), score integer, dr integer, orientation varchar(1))")
+        c.execute("create table synteny (query text, anchor text, gray varchar(1), score integer, dr integer, orientation varchar(1))")
 
     batch_query(qbed, sbed, all_data, options, c=c, transpose=False)
     batch_query(qbed, sbed, all_data, options, c=c, transpose=True)
