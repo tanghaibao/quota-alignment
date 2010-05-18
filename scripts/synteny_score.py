@@ -75,8 +75,6 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
         xpos, ypos = zip(*group)
         score = min(len(set(xpos)), len(set(ypos)))
 
-        if score < cutoff: continue
-
         # pick the closest flanker
         if abs(query - left_flanker[0]) < abs(query - right_flanker[0]):
             flanker = left_flanker
@@ -89,6 +87,8 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
         else:
             gray = "G"
             score -= 1 # slight penalty for not finding syntelog
+
+        if score < cutoff: continue
 
         # y-boundary of the block
         left, right = group[0][1], group[-1][1]
