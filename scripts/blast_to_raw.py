@@ -91,15 +91,11 @@ def main(blast_file, options):
         qi, q = qorder[query]
         si, s = sorder[subject]
         
-        if is_self:
-            # skip self-self hits.
-            if qi == si:
-                continue
+        if is_self and qi > si:
             # move all hits to same side when doing self-self BLAST
-            elif qi > si:
-                query, subject = subject, query
-                qi, si = si, qi
-                q, s = s, q
+            query, subject = subject, query
+            qi, si = si, qi
+            q, s = s, q
 
         key = query, subject
         if key in seen: continue
