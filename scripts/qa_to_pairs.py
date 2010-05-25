@@ -7,8 +7,6 @@
 convert qa_file back to the original gene names
 """
 
-import os.path as op
-import itertools
 import sys
 
 from bed_utils import Bed, RawLine
@@ -22,7 +20,7 @@ def qa_to_pairs(qa_file, qbed, sbed):
         s = RawLine(line)
         query = qbed[s.pos_a].accn
         subject = sbed[s.pos_b].accn
-        print "\t".join((query, subject))
+        yield query, subject
 
 
 if __name__ == "__main__":
@@ -45,5 +43,6 @@ if __name__ == "__main__":
 
     qa_file = args[0]
 
-    qa_to_pairs(qa_file, qbed, sbed)
+    for q, s in qa_to_pairs(qa_file, qbed, sbed):
+        print "\t".join((q, s))
 
