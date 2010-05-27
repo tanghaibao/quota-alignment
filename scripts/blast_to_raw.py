@@ -173,7 +173,8 @@ def main(blast_file, options):
     raw_fh = open(raw_name, "w")
 
     write_raw(qorder, sorder, filtered_blasts, raw_fh)
-    write_new_blast(filtered_blasts) 
+    if options.write_filtered_blast:
+        write_new_blast(filtered_blasts)
 
 
 def write_localdups(dups_fh, tandems, bed):
@@ -327,7 +328,10 @@ if __name__ == "__main__":
             help="maximum ratio of blast hits to genes a good value is 10. "
                  "if there are more blasts, only the those with the lowest "
                  "are kept. [default: %default]")
-    
+    filter_group.add_option("--write-filtered-blast", dest="write_filtered_blast",
+                            action="store_true", default=False,
+                            help="write a new blast with localdups and reps filtered")
+
     parser.add_option_group(filter_group)
 
     (options, blast_files) = parser.parse_args()
