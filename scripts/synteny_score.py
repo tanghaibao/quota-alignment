@@ -33,6 +33,20 @@ def transposed(data):
     return zip(y, x)
 
 
+def get_flanker(group, query):
+    group.sort()
+    pos = bisect_left(group, (query, 0))
+    left_flanker = group[0] if pos==0 else group[pos-1]
+    right_flanker = group[-1] if pos==len(group) else group[pos] 
+    # pick the closest flanker
+    if abs(query - left_flanker[0]) < abs(query - right_flanker[0]):
+        flanker = left_flanker
+    else:
+        flanker = right_flanker
+
+    return flanker 
+
+
 def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
     # get all synteny blocks for a query, algorithm is single linkage
     # anchors are a window centered on query 
@@ -55,10 +69,7 @@ def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
 
     for group in sorted(g):
         
-        group.sort()
-        pos = bisect_left(group, (query, 0))
-        left_flanker = group[0] if pos==0 else group[pos-1]
-        right_flanker = group[-1] if pos==len(group) else group[pos] 
+        qflanker, syntelog = get_flanker(group, query)
 
         # run a mini-dagchainer here, take the direction that gives us most anchors 
         if colinear:
@@ -78,13 +89,6 @@ def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
         xpos, ypos = zip(*group)
         score = min(len(set(xpos)), len(set(ypos)))
 
-        # pick the closest flanker
-        if abs(query - left_flanker[0]) < abs(query - right_flanker[0]):
-            flanker = left_flanker
-        else:
-            flanker = right_flanker
-
-        qflanker, syntelog = flanker
         if qflanker==query: 
             gray = "S"
         else:
@@ -141,7 +145,6 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
                 right_dist = abs(anchor_pos - right_pos) if anchor_chr==right_chr else 0
                 flank_dist = (max(left_dist, right_dist) / 10000 + 1) * 10000
 
-                #query = int(query.split("||")[-2])
                 data = (query, anchor, gray, score, flank_dist, orientation)
                 if sqlite:
                     c.execute("insert into synteny values (?,?,?,?,?,?)", data)
