@@ -33,7 +33,7 @@ def transposed(data):
     return zip(y, x)
 
 
-def find_synteny_region(query, data, window, cutoff, colinear=False):
+def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
     # get all synteny blocks for a query, algorithm is single linkage
     # anchors are a window centered on query 
     # two categories of syntenic regions depending on what query is:
@@ -47,7 +47,10 @@ def find_synteny_region(query, data, window, cutoff, colinear=False):
     a, b = itertools.tee(ysorted)
     next(b, None)
     for ia, ib in itertools.izip(a, b):
-        if ib[1]-ia[1] < window: g.join(ia, ib)
+        pos1, pos2 = ia[1], ib[1]
+        if pos2 - pos1 < window and sbed[pos1].seqid==sbed[pos2].seqid: 
+            g.join(ia, ib)
+
     #print list(g)
 
     for group in sorted(g):
@@ -122,7 +125,7 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
             rmin_pos = bisect_left(all_data, (rmin, 0))
             rmax_pos = bisect_left(all_data, (rmax, 0))
             data = all_data[rmin_pos:rmax_pos]
-            regions = find_synteny_region(r, data, window, cutoff, colinear=colinear)
+            regions = find_synteny_region(r, sbed, data, window, cutoff, colinear=colinear)
             #if not regions:
             #    print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*5))
             for syntelog, left, right, gray, orientation, score in regions:
@@ -138,7 +141,7 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
                 right_dist = abs(anchor_pos - right_pos) if anchor_chr==right_chr else 0
                 flank_dist = (max(left_dist, right_dist) / 10000 + 1) * 10000
 
-                query = int(query.split("||")[-2])
+                #query = int(query.split("||")[-2])
                 data = (query, anchor, gray, score, flank_dist, orientation)
                 if sqlite:
                     c.execute("insert into synteny values (?,?,?,?,?,?)", data)
