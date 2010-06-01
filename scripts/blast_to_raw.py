@@ -323,7 +323,9 @@ if __name__ == "__main__":
     filter_group.add_option("--filter_repeats", dest="filter_repeats", action="store_true", default=False,
             help="require higher e-value for repetitive matches BLAST.")
     filter_group.add_option("--cscore", type="float", default=None,
-            help="retain hits that have good bitscore [default: %default]")
+            help="retain hits that have good bitscore. a value of 0.5 means "
+                 "keep all values that are 50% or greater of the best hit. "
+                 "higher is more stringent [default: %default]")
     filter_group.add_option("--global_density_ratio", type="float", default=None,
             help="maximum ratio of blast hits to genes a good value is 10. "
                  "if there are more blasts, only the those with the lowest "
