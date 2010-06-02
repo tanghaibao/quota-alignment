@@ -42,6 +42,7 @@ def get_flanker(group, query):
     ((137, 13625), (137, 13625), False)
     """
     group.sort()
+    #print >>sys.stderr, group, query
     pos = bisect_left(group, (query, 0))
     left_flanker = group[0] if pos==0 else group[pos-1]
     right_flanker = group[-1] if pos == len(group) else group[pos]
@@ -52,6 +53,7 @@ def get_flanker(group, query):
         flanker, other = right_flanker, left_flanker
 
     flanked = not (pos==0 or pos == len(group) or flanker == query)
+    #print >>sys.stderr, flanker, flanked, "\n\n"
 
     return flanker, other, flanked
 
@@ -156,7 +158,7 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
                 far_syntelog = sbed[far_syntelog].accn
 
                 left_pos, right_pos = sorted((left_pos, right_pos))
-                data = (query, anchor, gray, score, flank_dist, orientation, far_syntelog, left_chr, left_pos, right_pos)
+                data = (query, anchor, gray, score, flank_dist, orientation, far_syntelog)
                 if sqlite:
                     c.execute("insert into synteny values (?,?,?,?,?,?)", data[:6])
                 else:
