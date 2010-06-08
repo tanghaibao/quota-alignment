@@ -122,11 +122,13 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
     window = options.window / 2
     sqlite = options.sqlite
     colinear = (options.scoring=="collinear")
+    qnote, snote = options.qnote, options.snote
 
     # process all genes present in the bed file
     if transpose:
         all_data = transposed(all_data)
         qbed, sbed = sbed, qbed
+        qnote, snote = snote, qnote
 
     all_data.sort()
     simple_bed = lambda x: (sbed[x].seqid, sbed[x].start)
@@ -140,8 +142,7 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
             rmax_pos = bisect_left(all_data, (rmax, 0))
             data = all_data[rmin_pos:rmax_pos]
             regions = find_synteny_region(r, sbed, data, window, cutoff, colinear=colinear)
-            if not regions:
-                print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*5))
+            #if not regions: print "%s\t%s" % (qbed[r].accn, "\t".join(["na"]*5))
             for syntelog, far_syntelog, left, right, gray, orientation, score in regions:
                 query = qbed[r].accn
 
@@ -158,9 +159,9 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
                 far_syntelog = sbed[far_syntelog].accn
 
                 left_pos, right_pos = sorted((left_pos, right_pos))
-                data = (query, anchor, gray, score, flank_dist, orientation, far_syntelog)
+                data = [query, anchor, gray, score, flank_dist, orientation, far_syntelog]
                 if sqlite:
-                    c.execute("insert into synteny values (?,?,?,?,?,?)", data[:6])
+                    c.execute("insert into synteny values (?,?,?,?,?,?,?,?)", data[:6]+[qnote,snote])
                 else:
                     print "\t".join(map(str, data))
 
@@ -196,7 +197,8 @@ def main(blast_file, options):
         conn = sqlite3.connect(options.sqlite)
         c = conn.cursor()
         c.execute("drop table if exists synteny")
-        c.execute("create table synteny (query text, anchor text, gray varchar(1), score integer, dr integer, orientation varchar(1))")
+        c.execute("create table synteny (query text, anchor text, gray varchar(1), score integer, dr integer, "
+                "orientation varchar(1), qnote text, snote text)")
 
     batch_query(qbed, sbed, all_data, options, c=c, transpose=False)
     batch_query(qbed, sbed, all_data, options, c=c, transpose=True)
@@ -208,8 +210,6 @@ def main(blast_file, options):
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
     import optparse
 
     parser = optparse.OptionParser(__doc__)
@@ -217,8 +217,14 @@ if __name__ == '__main__':
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
-    parser.add_option("--sqlite", dest="sqlite", default=None,
+
+    coge_group = optparse.OptionGroup(parser, "CoGe-specific options")
+    coge_group.add_option("--sqlite", dest="sqlite", default=None,
             help="write sqlite database")
+    coge_group.add_option("--qnote", dest="qnote", default="null",
+            help="query dataset group id")
+    coge_group.add_option("--snote", dest="snote", default="null",
+            help="subject dataset group id")
 
     params_group = optparse.OptionGroup(parser, "Synteny parameters")
     params_group.add_option("--window", dest="window", type="int", default=40,
@@ -229,6 +235,7 @@ if __name__ == '__main__':
     params_group.add_option("--scoring", dest="scoring", choices=supported_scoring, default="collinear",
             help="scoring scheme, must be one of " + str(supported_scoring) +" [default: %default]")
 
+    parser.add_option_group(coge_group)
     parser.add_option_group(params_group)
 
     (options, blast_files) = parser.parse_args()
