@@ -136,6 +136,10 @@ def main(blast_file, options):
             sdups_fh = open(op.splitext(sbed_file)[0] + ".localdups", "w")
             sdups_to_mother = write_localdups(sdups_fh, standems, sbed)
 
+        if options.tandems_only:
+            # just want to use this script as a tandem finder.
+            sys.exit()
+
         # write out new .bed after tandem removal
         write_new_bed(qbed, qdups_to_mother)
         if not is_self:
@@ -316,6 +320,8 @@ if __name__ == "__main__":
             help="path to sbed")
     parser.add_option("--no_strip_names", dest="strip_names", action="store_false", default=True,
             help="do not strip alternative splicing (e.g. At5g06540.1 -> At5g06540)")
+    parser.add_option("--tandems-only", dest="tandems_only", action="store_true", default=False,
+            help="only calculate tandems, write .localdup file and exit.")
 
     filter_group = optparse.OptionGroup(parser, "BLAST filters")
     filter_group.add_option("--tandem_Nmax", dest="tandem_Nmax", type="int", default=None, 
