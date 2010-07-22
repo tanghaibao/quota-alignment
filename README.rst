@@ -66,22 +66,16 @@ Default package comes with the test data for case 1 and 2 in ``run.sh``. More te
 
 BLAST anchors chaining and quota-based screening
 ::::::::::::::::::::::::::::::::::::::::::::::::::::
-First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format), see section `Pre- and post-processing`_::
+First you need to figure out a way to convert the BLAST result into the following format (called ``.raw`` format), see section `Pre- and post-processing`_, in particular on filtering BLAST output::
 
-    1       6       1       4848    1e-12 
-    1       7       1       4847    2e-10 
-    1       8       1       4847    0 
-    1       9       1       4846    3e-14 
+    1       6       1       4848    12 
+    1       7       1       4847    10 
+    1       8       1       4847    50 
+    1       9       1       4846    14 
 
-Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``, and ``E-value``. Then you can convert the format (called ``.raw`` format) to the ``.qa`` format as required::
+Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``, and ``log10(E-value)``. Then we can do something like::
 
-    cluster_utils.py --format=raw --log_evalue maize_sorghum.raw maize_sorghum.qa
-
-``--log_evalue`` converts the E-value to ``min(int(-log10(E-value)),50)`` for score, so that all the BLAST anchors score in the range 0-50.
-
-Then we can do something like::
-
-    quota_align.py --merge --Dm=20 --min_size=5 --quota=2:1 maize_sorghum.qa 
+    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --quota=2:1 maize_sorghum.qa 
 
 ``--merge`` asks for chaining, distance cutoff ``--Dm=20`` for extending the chain, ``--min_size=5`` for keeping the chains that are long enought; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region).
 
@@ -193,6 +187,26 @@ This will generate a dot plot that you can stare to spot any problem. Below is a
 The result of quota-based screening can be compared to the raw blast result. Using the ``blast_plot.py`` in ``script`` folder. The syntax is similar to ``qa_plot``, only on differernt input format::
 
     blast_plot.py --qbed=athaliana.bed --sbed=grape.bed athaliana_grape.blastp
+
+Summary
+--------
+The following is shell script ``run.sh`` that can be used from a BLAST output to the dot plot figure. Please note that you need to modify the path and params to make it work on your machine::
+
+    #!/bin/bash
+
+    # quota-alignment folder
+    QA=${HOME}/projects/quota-alignment/
+    # query species
+    SA=brapa
+    ### target species
+    SB=athaliana
+
+    # filter blast results
+    ${QA}/scripts/blast_to_raw.py ../blast/${SA}_${SB}.blastz --qbed=${SA}.bed --sbed=${SB}.bed --tandem_Nmax=10 --cscore=0.7
+    # run the quota-based screening
+    ${QA}/quota_align.py --format=raw --merge --Dm=30 --min_size=5 --quota=3:1 ../blast/${SA}_${SB}.raw
+    # visualize result as dot plot
+    ${QA}/scripts/qa_plot.py --qbed=${SA}.nolocaldups.bed --sbed=${SB}.nolocaldups.bed ../blast/${SA}_${SB}.raw.filtered
 
 
 Reference
