@@ -30,15 +30,18 @@ class BedLine(object):
 
 class Bed(list):
 
-    def __init__(self, filename):
+    def __init__(self, filename, key=None):
         self.filename = filename
+        # the sorting key provides some flexibility in ordering the features
+        # for example, user might not like the lexico-order of seqid
+        self.key = key or (lambda x: (x.seqid, x.start, x.accn))
         for line in open(filename):
             if line[0] == "#": continue
             if line.startswith('track'): continue
             self.append(BedLine(line))
 
         self.seqids = sorted(set(b.seqid for b in self))
-        self.sort(key=lambda a: (a.seqid, a.start, a.accn))
+        self.sort(key=self.key))
 
     def get_order(self):
         return dict((f.accn, (i, f)) for (i, f) in enumerate(self))
@@ -101,5 +104,5 @@ class BlastLine(object):
 
     def __str__(self):
         return "\t".join(map(str, [getattr(self, attr) \
-                for attr in BlastLine.__slots__][:-4]))
+                for attr in BlastLine.__slots__[:-4]]))
 
