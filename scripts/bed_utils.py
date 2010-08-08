@@ -41,7 +41,7 @@ class Bed(list):
             self.append(BedLine(line))
 
         self.seqids = sorted(set(b.seqid for b in self))
-        self.sort(key=self.key))
+        self.sort(key=self.key)
 
     def get_order(self):
         return dict((f.accn, (i, f)) for (i, f) in enumerate(self))
