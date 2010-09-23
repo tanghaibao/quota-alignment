@@ -25,7 +25,47 @@ def get_breaks(bed):
         yield seqid, ranks[0][1], ranks[-1][1]
 
 
-def dotplot(blast_file, qbed, sbed, image_name):
+def score(cluster):
+    x, y = zip(*cluster)
+    return min(len(set(x)), len(set(y)))
+    
+        
+def single_linkage(points, xdist=20, ydist=20, N=6):
+
+    # This is the core single linkage algorithm
+    # this behaves in O(n) complexity: we iterate through the pairs, for each pair
+    # we look back on the adjacent pairs to find links
+    # TODO: does not check chromosomal ends at this time
+
+    clusters = Grouper()
+    n = len(points)
+    points.sort()
+    for i in xrange(n):
+        for j in xrange(i-1, -1, -1):
+            # x-axis distance
+            del_x = points[i][0]-points[j][0]
+            if del_x > xdist: break
+            # y-axis distance
+            del_y = points[i][1]-points[j][1]
+            if abs(del_y) > ydist: continue
+            # otherwise join
+            clusters.join(points[i], points[j])
+    clusters = [cluster for cluster in list(clusters) if score(cluster)>=N]
+    return clusters
+
+
+def draw_box(clusters, ax, color="b"):
+
+    for cluster in clusters:
+        xrect, yrect = zip(*cluster)
+        xmin, xmax, ymin, ymax = min(xrect), max(xrect), \
+                                min(yrect), max(yrect)
+        ax.add_patch(Rectangle((xmin, ymin), xmax-xmin, ymax-ymin,\
+                                ec=color, fc='y', alpha=.5))
+        #ax.plot(xrect, yrect, 'r.', ms=3)
+                                
+
+def dotplot(blast_file, qbed, sbed, image_name, synteny=False):
 
     blast_fh = file(blast_file)
     blasts = [BlastLine(line) for line in blast_fh]
@@ -52,6 +92,10 @@ def dotplot(blast_file, qbed, sbed, image_name):
 
     x, y = zip(*data)
     ax.scatter(x, y, c='k', s=.05, lw=0, alpha=.9)
+
+    if synteny:
+        clusters = single_linkage(data)
+        draw_box(clusters, ax)
 
     xlim = (0, len(qbed))
     ylim = (0, len(sbed))
@@ -109,6 +153,9 @@ if __name__ == "__main__":
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
+    parser.add_option("--synteny", dest="synteny", 
+            default=False, action="store_true",
+            help="run a fast synteny scan and display synteny blocks")
 
     (options, args) = parser.parse_args()
 
@@ -117,9 +164,10 @@ if __name__ == "__main__":
 
     qbed = Bed(options.qbed)
     sbed = Bed(options.sbed)
+    synteny = options.synteny
 
     blast_file = args[0]
 
     image_name = op.splitext(blast_file)[0] + ".png"
-    dotplot(blast_file, qbed, sbed, image_name)
+    dotplot(blast_file, qbed, sbed, image_name, synteny=synteny)
 
