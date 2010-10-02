@@ -10,6 +10,7 @@ visualize the blast_file in a dotplot
 import os.path as op
 import itertools
 import sys
+import collections
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
@@ -30,12 +31,11 @@ def score(cluster):
     return min(len(set(x)), len(set(y)))
     
         
-def single_linkage(points, xdist=20, ydist=20, N=6):
+def single_linkage(points, xdist, ydist, N):
 
     # This is the core single linkage algorithm
     # this behaves in O(n) complexity: we iterate through the pairs, for each pair
     # we look back on the adjacent pairs to find links
-    # TODO: does not check chromosomal ends at this time
 
     clusters = Grouper()
     n = len(points)
@@ -51,6 +51,21 @@ def single_linkage(points, xdist=20, ydist=20, N=6):
             # otherwise join
             clusters.join(points[i], points[j])
     clusters = [cluster for cluster in list(clusters) if score(cluster)>=N]
+    return clusters
+
+
+def batch_linkage(points, qbed, sbed, xdist=20, ydist=20, N=6):
+    
+    # this runs single_linkage() per chromosome pair
+    chr_pair_points = collections.defaultdict(list)
+    for qi, si in points:
+        q, s = qbed[qi], sbed[si]
+        chr_pair_points[(q.seqid, s.seqid)].append((qi, si))
+    
+    clusters = []
+    for points in chr_pair_points.values():
+        clusters.extend(single_linkage(points, xdist, ydist, N))
+        
     return clusters
 
 
@@ -94,7 +109,8 @@ def dotplot(blast_file, qbed, sbed, image_name, synteny=False):
     ax.scatter(x, y, c='k', s=.05, lw=0, alpha=.9)
 
     if synteny:
-        clusters = single_linkage(data)
+        #clusters = single_linkage(data)
+        clusters = batch_linkage(data, qbed, sbed)
         draw_box(clusters, ax)
 
     xlim = (0, len(qbed))
