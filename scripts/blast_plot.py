@@ -13,8 +13,11 @@ import sys
 import collections
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from matplotlib.patches import Rectangle
 
 from bed_utils import Bed, BlastLine
+sys.path.insert(0, op.join(op.dirname(__file__), ".."))
+from grouper import Grouper
 
 
 def get_breaks(bed):
@@ -141,7 +144,7 @@ def dotplot(blast_file, qbed, sbed, image_name, synteny=False):
     ax.set_ylim(ylim)
 
     # i always like the latex font
-    _ = lambda x: r"$\rm{%s}$" % x.replace("_", " ").replace(" ", r"\ ")
+    _ = lambda x: r"$\mathsf{%s}$" % x.replace("_", " ").replace(" ", r"\ ")
     to_ax_label = lambda fname: _(op.basename(fname).split(".")[0])
 
     # add genome names
