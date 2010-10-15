@@ -83,7 +83,7 @@ def draw_box(clusters, ax, color="b"):
         #ax.plot(xrect, yrect, 'r.', ms=3)
                                 
 
-def dotplot(blast_file, qbed, sbed, image_name, synteny=False):
+def dotplot(blast_file, qbed, sbed, image_name, is_self=False, synteny=False):
 
     blast_fh = file(blast_file)
     blasts = [BlastLine(line) for line in blast_fh]
@@ -112,7 +112,6 @@ def dotplot(blast_file, qbed, sbed, image_name, synteny=False):
     ax.scatter(x, y, c='k', s=.05, lw=0, alpha=.9)
 
     if synteny:
-        #clusters = single_linkage(data)
         clusters = batch_linkage(data, qbed, sbed)
         draw_box(clusters, ax)
 
@@ -120,25 +119,35 @@ def dotplot(blast_file, qbed, sbed, image_name, synteny=False):
     ylim = (0, len(sbed))
 
     xchr_labels, ychr_labels = [], []
+    ignore = True # tag to mark whether to plot chromosome name (skip small ones)
+    ignore_size = 100
     # plot the chromosome breaks
     for (seqid, beg, end) in get_breaks(qbed):
-        xchr_labels.append((seqid, (beg + end)/2))
+        ignore = abs(end-beg) < ignore_size 
+        xchr_labels.append((seqid, (beg + end)/2, ignore))
         ax.plot([beg, beg], ylim, "g-", alpha=.5)
 
     for (seqid, beg, end) in get_breaks(sbed):
-        ychr_labels.append((seqid, (beg + end)/2))
+        ignore = abs(end-beg) < ignore_size 
+        ychr_labels.append((seqid, (beg + end)/2, ignore))
         ax.plot(xlim, [beg, beg], "g-", alpha=.5)
 
     # plot the chromosome labels
-    for label, pos in xchr_labels:
+    for label, pos, ignore in xchr_labels:
         pos = .1 + pos * .8/xlim[1]
-        root.text(pos, .91, r"%s" % label, color="b",
-            size=9, alpha=.5, rotation=45)
+        if not ignore:
+            root.text(pos, .91, r"%s" % label, color="b",
+                size=9, alpha=.5, rotation=45)
 
-    for label, pos in ychr_labels:
+    for label, pos, ignore in ychr_labels:
         pos = .1 + pos * .8/ylim[1]
-        root.text(.91, pos, r"%s" % label, color="b",
-            size=9, alpha=.5, ha="left", va="center")
+        if not ignore:
+            root.text(.91, pos, r"%s" % label, color="b",
+                size=9, alpha=.5, ha="left", va="center")
+
+    # create a diagonal to separate mirror image for self comparison
+    if is_self:
+        ax.plot(xlim, ylim, 'm-', alpha=.5, lw=2)
 
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -175,11 +184,19 @@ if __name__ == "__main__":
     parser.add_option("--synteny", dest="synteny", 
             default=False, action="store_true",
             help="run a fast synteny scan and display synteny blocks")
+    parser.add_option("--format", dest="format", default="png",
+            help="generate image of format (png, pdf, ps, eps, svg, etc.)"
+            "[default: %default]")
 
     (options, args) = parser.parse_args()
 
     if not (len(args) == 1 and options.qbed and options.sbed):
         sys.exit(parser.print_help())
+
+    is_self = False
+    if options.qbed==options.sbed:
+        print >>sys.stderr, "Looks like this is self-self comparison"
+        is_self = True
 
     qbed = Bed(options.qbed)
     sbed = Bed(options.sbed)
@@ -187,6 +204,6 @@ if __name__ == "__main__":
 
     blast_file = args[0]
 
-    image_name = op.splitext(blast_file)[0] + ".png"
-    dotplot(blast_file, qbed, sbed, image_name, synteny=synteny)
+    image_name = op.splitext(blast_file)[0] + "." + options.format
+    dotplot(blast_file, qbed, sbed, image_name, is_self=is_self, synteny=synteny)
 
