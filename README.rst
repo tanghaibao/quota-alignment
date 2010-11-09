@@ -10,14 +10,14 @@ Quota synteny alignment
 Introduction
 ------------
 
-Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected coverage (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
+Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected depth (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
 
 .. image:: http://bit.ly/aPPHYO 
     :alt: before quota-align
 .. image:: http://bit.ly/cikBwL 
     :alt: after quota-align
 
-This program tries to screen the clusters based on the coverage constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
+This program tries to screen the clusters based on the depth constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
 
 To see the algorithm in action without installation, please go to `CoGe SynMap tool <http://genomevolution.org/CoGe/SynMap.pl>`_. Select "Analysis Options", select algorithm options for "Merge Syntenic Blocks" (``quota_align.py --merge``) and/or "Syntenic Depth" (``quota_align.py --quota``).
 
@@ -50,7 +50,7 @@ Installation
 
 Cookbook
 -------------------------
-Default package comes with the test data for case 1 and 2 in ``run.sh``. More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_. Unpack into the folder, and execute ``run.sh``.
+Default package comes with the test data for case 1 and 2 in ``run.sh``. **More test data set can be downloaded `here <http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_**. Unpack into the folder, and execute ``run.sh``.
 
 BLAST anchors chaining and quota-based screening
 ::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -65,7 +65,14 @@ Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``, and
 
     quota_align.py --format=raw --merge --Dm=20 --min_size=5 --quota=2:1 maize_sorghum.qa 
 
-``--merge`` asks for chaining, distance cutoff ``--Dm=20`` for extending the chain, ``--min_size=5`` for keeping the chains that are long enought; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region).
+``--merge`` asks for chaining, distance cutoff ``--Dm=20`` for extending the chain, ``--min_size=5`` for keeping the chains that are long enought; ``--quota=2:1`` turns on the quota-based screening (and asks for two-to-one match, in this case, lineage specific WGD in maize genome, make every **2** maize region matching **1** sorghum region). Note that if you set the quota wrong, e.g. suppose you don't know the quota ratio between maize and sorghum, and you typed ``1:1``, you will see the ``coverage`` reports to be too low::
+
+    write (134) clusters to 'data/maize_sorghum.qa.filtered'
+    genome X coverage: 62.6%
+    genome Y coverage: 97.5%
+
+In this case, genome X (maize) has only slightly over half of the genome
+aligned, missing the duplicated counterpart.
 
 BLASTZ anchors chaining and quota-based screening
 :::::::::::::::::::::::::::::::::::::::::::::::::::::

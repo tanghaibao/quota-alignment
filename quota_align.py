@@ -232,8 +232,6 @@ if __name__ == '__main__':
     for cluster in clusters:
         assert len(cluster) > 0
 
-    total_len_x, total_len_y = calc_coverage(clusters, self_match=self_match)
-
     # below runs `block merging`
     if options.merge: 
         chain = range(len(clusters))
@@ -243,6 +241,8 @@ if __name__ == '__main__':
         fw = file(merged_qa_file, "w")
         clusters = [clusters[c] for c in chain]
         write_clusters(fw, clusters)
+
+    total_len_x, total_len_y = calc_coverage(clusters, self_match=self_match)
 
     if not options.quota:
         sys.exit(0)
