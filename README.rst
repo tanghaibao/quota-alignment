@@ -32,25 +32,13 @@ Installation
 
 - Python version >=2.6
 
-- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_. Please put the executable ``glpsol`` on the ``PATH``::
-
-    wget http://ftp.gnu.org/gnu/glpk/glpk-4.42.tar.gz
-    tar xzf glpk-4.42.tar.gz
-    cd glpk-4.42/
-    ./configure
-    make
-    sudo make install
+- GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_. Please put the executable ``glpsol`` on the ``PATH``.
 
 **Optional dependencies**
 
-- `SCIP <http://scip.zib.de/download.shtml>`_ faster integer programming solver, choose the binary (32-bit, 64-bit) that fits your machine and choose the one linked with CLP (for fast speed), note that in order to run SCIP, `LAPACK <http://www.netlib.org/lapack/>`_ needs to be installed too. Please put executable ``scip`` on the ``PATH``::
+- `SCIP <http://scip.zib.de/download.shtml>`_ faster integer programming solver, choose the binary (32-bit, 64-bit) that fits your machine. SCIP might have dependency on `LAPACK <http://www.netlib.org/lapack/>`_, which needs to be installed too. Please rename the executable ``scip`` and put it on the ``PATH``, for example::
 
-    unzip scip-1.2.0.linux.x86_64.gnu.opt.clp.zip
-    sudo apt-get install liblapack-dev
-    sudo ldconfig
-    ./scip-1.2.0.linux.x86_64.gnu.opt.clp
-    sudo ln -s /usr/lib/liblapack.so{,.3}
-    sudo cp scip-1.2.0.linux.x86_64.gnu.opt.clp /usr/local/bin/scip
+    sudo cp scip-x.x.0.linux.x86_64 /usr/local/bin/scip
     sudo chmod +x !$
 
 - `bx-python <http://bitbucket.org/james_taylor/bx-python/wiki/Home>`_ package, this is only required when user wants to analyze ``.maf`` formatted data (use ``maf_utils.py``)::
@@ -146,7 +134,7 @@ There are a few utility scripts included in ``scripts/`` folder.
 
 GFF to BED 
 ::::::::::::::::::::
-Most annotation groups provide ``.gff`` file (see `gff format <http://genome.ucsc.edu/FAQ/FAQformat.html#format3>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following to create the ``.bed`` file (``BCBio`` module required)::
+Most annotation groups only provide ``.gff`` file (see `gff format <http://genome.ucsc.edu/FAQ/FAQformat.html#format3>`_) for the annotation of gene models. I often convert the ``.gff`` file to a simpler ``.bed`` format (see `bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_). You can do the following to create the ``.bed`` file (``BCBio`` module required)::
 
     gff_to_bed.py athaliana.gff >athaliana.bed
 
@@ -201,7 +189,7 @@ The following is shell script ``run.sh`` that can be used from a BLAST output to
     ### target species
     SB=athaliana
 
-    # filter blast results
+    # filter blast results (note that it needs to be tab-delimited blast m8 format)
     ${QA}/scripts/blast_to_raw.py ../blast/${SA}_${SB}.blastz --qbed=${SA}.bed --sbed=${SB}.bed --tandem_Nmax=10 --cscore=0.7
     # run the quota-based screening
     ${QA}/quota_align.py --format=raw --merge --Dm=30 --min_size=5 --quota=3:1 ../blast/${SA}_${SB}.raw
