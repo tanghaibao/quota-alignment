@@ -12,9 +12,9 @@ Introduction
 
 Typically in comparative genomics, we can identify anchors, chain them into syntenic blocks and interpret these blocks as derived from a common descent. However, when comparing two genomes undergone ancient genome duplications (plant genomes in particular), we have large number of blocks that are not orthologous, but are paralogous. This has forced us sometimes to use *ad-hoc* rules to screen these blocks. So the question is: **given the expected depth (quota) along both x- and y-axis, select a subset of the anchors with maximized total score**.
 
-.. image:: http://bit.ly/aPPHYO 
+.. image:: http://picasaweb.google.com/lh/photo/2qyGEPuWOH2XFRPE6u-uEw?feat=directlink 
     :alt: before quota-align
-.. image:: http://bit.ly/cikBwL 
+.. image:: http://picasaweb.google.com/lh/photo/pBZoTkUHOgiJP3Kf2XsQmQ?feat=directlink 
     :alt: after quota-align
 
 This program tries to screen the clusters based on the depth constraints enforced by the user. For example, between rice-sorghum comparison, we can enforce ``1:1`` ratio to get all the orthologous blocks; or maybe ``4:2`` to grab orthologous blocks between athaliana-poplar. But the quota has to be given by the user. The program than tries to optimize the scores of these blocks globally.
