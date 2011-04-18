@@ -206,4 +206,4 @@ The following is shell script ``run.sh`` that can be used from a BLAST output to
 
 Reference
 ---------
-Tang et al. Guided synteny alignment between duplicated genomes through integer programming.
+Tang et al. (2011) *Screening synteny blocks in pairwise genome comparisons through integer programming.* [ `BMC Bioinformatics <http://www.biomedcentral.com/1471-2105/12/102>`_ ]
