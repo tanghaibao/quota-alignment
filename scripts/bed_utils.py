@@ -82,7 +82,7 @@ class BlastLine(object):
     __slots__ = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
                  'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score', \
                  'qseqid', 'sseqid', 'qi', 'si')
- 
+
     def __init__(self, sline):
         args = sline.split("\t")
         self.query = args[0]
@@ -97,7 +97,7 @@ class BlastLine(object):
         self.sstop = int(args[9])
         self.evalue = float(args[10])
         self.score = float(args[11])
- 
+
     def __repr__(self):
         return "BlastLine('%s' to '%s', eval=%.3f, score=%.1f)" % \
                 (self.query, self.subject, self.evalue, self.score)
@@ -105,4 +105,3 @@ class BlastLine(object):
     def __str__(self):
         return "\t".join(map(str, [getattr(self, attr) \
                 for attr in BlastLine.__slots__[:-4]]))
-

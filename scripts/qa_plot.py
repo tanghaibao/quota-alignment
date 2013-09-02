@@ -12,18 +12,38 @@ import itertools
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from itertools import groupby
+
 from matplotlib.patches import Rectangle
 
 from bed_utils import Bed, Raw
 
 
-def get_breaks(bed):
+def get_breaks_bpscale(bed):
+    key = lambda x: x.seqid
+    for seqid, lines in groupby(bed, key=key):
+        lines = sorted(lines, key=lambda x: x.start)
+        yield seqid, min(lines).start, max(lines).end
+
+
+def get_breaks(bed, bpscale=False):
+    if bpscale:
+        for seqid, start, end in get_breaks_bpscale(bed):
+            yield seqid, start, end
+        return
+
     # get chromosome break positions
     simple_bed = bed.get_simple_bed()
-    for seqid, ranks in itertools.groupby(simple_bed, key=lambda x:x[0]):
+    key = lambda x: x[0]
+    for seqid, ranks in groupby(simple_bed, key=key):
         ranks = list(ranks)
         # chromosome, extent of the chromosome
         yield seqid, ranks[0][1], ranks[-1][1]
+
+
+def get_len(bed, bpscale=False):
+    for seqid, beg, end in get_breaks(bed, bpscale=bpscale):
+        yield seqid, end - beg + 1
 
 
 def draw_box(fp, ax, color="b"):
@@ -42,7 +62,7 @@ def draw_box(fp, ax, color="b"):
                                 ec=color, fill=False, lw=.2))
 
 
-def dotplot(qa_file, qbed, sbed, image_name):
+def dotplot(qa_file, qbed, sbed, image_name, bpscale=False):
 
     qa = Raw(qa_file)
     qa_fh = file(qa_file)
@@ -58,16 +78,18 @@ def dotplot(qa_file, qbed, sbed, image_name):
     x, y = zip(*data)
     ax.scatter(x, y, c='k', s=.1, lw=0, alpha=.9)
 
-    xlim = (0, len(qbed))
-    ylim = (0, len(sbed))
+    xsize = sum([s for (seqid, s) in get_len(qbed, bpscale=bpscale)])
+    ysize = sum([s for (seqid, s) in get_len(sbed, bpscale=bpscale)])
+    xlim = (0, xsize)
+    ylim = (0, ysize)
 
     xchr_labels, ychr_labels = [], []
     # plot the chromosome breaks
-    for (seqid, beg, end) in get_breaks(qbed):
+    for (seqid, beg, end) in get_breaks(qbed, bpscale=bpscale):
         xchr_labels.append((seqid, (beg + end)/2))
         ax.plot([beg, beg], ylim, "g-", alpha=.5)
 
-    for (seqid, beg, end) in get_breaks(sbed):
+    for (seqid, beg, end) in get_breaks(sbed, bpscale=bpscale):
         ychr_labels.append((seqid, (beg + end)/2))
         ax.plot(xlim, [beg, beg], "g-", alpha=.5)
 
@@ -100,7 +122,7 @@ def dotplot(qa_file, qbed, sbed, image_name):
     plt.setp(ax.get_xticklabels() + ax.get_yticklabels(), color='gray', size=10)
 
     root.set_axis_off()
-    print >>sys.stderr, "print image to %s" % image_name
+    print >>sys.stderr, "print image to `%s`" % image_name
     plt.savefig(image_name, dpi=600)
 
 
@@ -113,6 +135,8 @@ if __name__ == "__main__":
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
+    parser.add_option("--bpscale", default=False, action="store_true",
+            help="Use actual bp position in bed file [default: %default]")
 
     (options, args) = parser.parse_args()
 
@@ -125,5 +149,4 @@ if __name__ == "__main__":
     qa_file = args[0]
 
     image_name = op.splitext(qa_file)[0] + ".png"
-    dotplot(qa_file, qbed, sbed, image_name)
-
+    dotplot(qa_file, qbed, sbed, image_name, bpscale=options.bpscale)
