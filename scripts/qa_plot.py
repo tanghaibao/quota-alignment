@@ -96,7 +96,7 @@ def dotplot(qa_file, qbed, sbed, image_name, bpscale=False):
     # plot the chromosome labels
     for label, pos in xchr_labels:
         pos = .1 + pos * .8/xlim[1]
-        root.text(pos, .91, r"%s" % label, color="b",
+        root.text(pos, .93, r"%s" % label, color="b",
             size=9, alpha=.5, rotation=45)
 
     for label, pos in ychr_labels:

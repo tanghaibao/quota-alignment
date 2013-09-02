@@ -16,24 +16,16 @@ import matplotlib.ticker as ticker
 from matplotlib.patches import Rectangle
 
 from bed_utils import Bed, BlastLine
+from qa_plot import get_breaks, get_len
 sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
-
-
-def get_breaks(bed):
-    # get chromosome break positions
-    simple_bed = bed.get_simple_bed()
-    for seqid, ranks in itertools.groupby(simple_bed, key=lambda x:x[0]):
-        ranks = list(ranks)
-        # chromosome, extent of the chromosome
-        yield seqid, ranks[0][1], ranks[-1][1]
 
 
 def score(cluster):
     x, y = zip(*cluster)
     return min(len(set(x)), len(set(y)))
-    
-        
+
+
 def single_linkage(points, xdist, ydist, N):
 
     # This is the core single linkage algorithm
@@ -58,17 +50,17 @@ def single_linkage(points, xdist, ydist, N):
 
 
 def batch_linkage(points, qbed, sbed, xdist=20, ydist=20, N=6):
-    
+
     # this runs single_linkage() per chromosome pair
     chr_pair_points = collections.defaultdict(list)
     for qi, si in points:
         q, s = qbed[qi], sbed[si]
         chr_pair_points[(q.seqid, s.seqid)].append((qi, si))
-    
+
     clusters = []
     for points in chr_pair_points.values():
         clusters.extend(single_linkage(points, xdist, ydist, N))
-        
+
     return clusters
 
 
@@ -81,9 +73,10 @@ def draw_box(clusters, ax, color="b"):
         ax.add_patch(Rectangle((xmin, ymin), xmax-xmin, ymax-ymin,\
                                 ec=color, fc='y', alpha=.5))
         #ax.plot(xrect, yrect, 'r.', ms=3)
-                                
 
-def dotplot(blast_file, qbed, sbed, image_name, is_self=False, synteny=False):
+
+def dotplot(blast_file, qbed, sbed, image_name, is_self=False,
+            synteny=False, bpscale=False):
 
     blast_fh = file(blast_file)
     blasts = [BlastLine(line) for line in blast_fh]
@@ -95,13 +88,18 @@ def dotplot(blast_file, qbed, sbed, image_name, is_self=False, synteny=False):
     data = []
     for b in blasts:
         query, subject = b.query, b.subject
-        if query not in qorder or subject not in sorder: continue
-        key = query, subject
-        if key in seen: continue
-        seen.add(key)
+        if bpscale:
+            qi = (b.qstart + b.qstop) / 2
+            si = (b.sstart + b.sstop) / 2
+        else:
+            if query not in qorder or subject not in sorder: continue
+            key = query, subject
+            if key in seen: continue
+            seen.add(key)
 
-        qi, q = qorder[query]
-        si, s = sorder[subject]
+            qi, q = qorder[query]
+            si, s = sorder[subject]
+
         data.append((qi, si))
 
     fig = plt.figure(1,(8,8))
@@ -109,26 +107,29 @@ def dotplot(blast_file, qbed, sbed, image_name, is_self=False, synteny=False):
     ax = fig.add_axes([.1,.1,.8,.8]) # the dot plot
 
     x, y = zip(*data)
-    ax.scatter(x, y, c='k', s=.05, lw=0, alpha=.9)
+    ax.scatter(x, y, c='k', s=1, lw=0, alpha=.9)
+    print >> sys.stderr, "A total of {0} dots to output.".format(len(data))
 
     if synteny:
         clusters = batch_linkage(data, qbed, sbed)
         draw_box(clusters, ax)
 
-    xlim = (0, len(qbed))
-    ylim = (0, len(sbed))
+    xsize = sum([s for (seqid, s) in get_len(qbed, bpscale=bpscale)])
+    ysize = sum([s for (seqid, s) in get_len(sbed, bpscale=bpscale)])
+    xlim = (0, xsize)
+    ylim = (0, ysize)
 
     xchr_labels, ychr_labels = [], []
     ignore = True # tag to mark whether to plot chromosome name (skip small ones)
     ignore_size = 100
     # plot the chromosome breaks
-    for (seqid, beg, end) in get_breaks(qbed):
-        ignore = abs(end-beg) < ignore_size 
+    for (seqid, beg, end) in get_breaks(qbed, bpscale=bpscale):
+        ignore = abs(end-beg) < ignore_size
         xchr_labels.append((seqid, (beg + end)/2, ignore))
         ax.plot([beg, beg], ylim, "g-", alpha=.5)
 
-    for (seqid, beg, end) in get_breaks(sbed):
-        ignore = abs(end-beg) < ignore_size 
+    for (seqid, beg, end) in get_breaks(sbed, bpscale=bpscale):
+        ignore = abs(end-beg) < ignore_size
         ychr_labels.append((seqid, (beg + end)/2, ignore))
         ax.plot(xlim, [beg, beg], "g-", alpha=.5)
 
@@ -136,7 +137,7 @@ def dotplot(blast_file, qbed, sbed, image_name, is_self=False, synteny=False):
     for label, pos, ignore in xchr_labels:
         pos = .1 + pos * .8/xlim[1]
         if not ignore:
-            root.text(pos, .91, r"%s" % label, color="b",
+            root.text(pos, .93, r"%s" % label, color="b",
                 size=9, alpha=.5, rotation=45)
 
     for label, pos, ignore in ychr_labels:
@@ -168,7 +169,7 @@ def dotplot(blast_file, qbed, sbed, image_name, is_self=False, synteny=False):
     plt.setp(ax.get_xticklabels() + ax.get_yticklabels(), color='gray', size=10)
 
     root.set_axis_off()
-    print >>sys.stderr, "print image to %s" % image_name
+    print >>sys.stderr, "print image to `%s`" % image_name
     plt.savefig(image_name, dpi=1000)
 
 
@@ -181,9 +182,11 @@ if __name__ == "__main__":
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
             help="path to sbed")
-    parser.add_option("--synteny", dest="synteny", 
+    parser.add_option("--synteny", dest="synteny",
             default=False, action="store_true",
             help="run a fast synteny scan and display synteny blocks")
+    parser.add_option("--bpscale", default=False, action="store_true",
+            help="Use actual bp position in bed file [default: %default]")
     parser.add_option("--format", dest="format", default="png",
             help="generate image of format (png, pdf, ps, eps, svg, etc.)"
             "[default: %default]")
@@ -205,5 +208,5 @@ if __name__ == "__main__":
     blast_file = args[0]
 
     image_name = op.splitext(blast_file)[0] + "." + options.format
-    dotplot(blast_file, qbed, sbed, image_name, is_self=is_self, synteny=synteny)
-
+    dotplot(blast_file, qbed, sbed, image_name, is_self=is_self,
+            synteny=synteny, bpscale=options.bpscale)
