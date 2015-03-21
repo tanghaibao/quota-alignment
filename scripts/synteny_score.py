@@ -4,16 +4,32 @@
 """
 %prog rice_sorghum.blastp.filtered --qbed=rice.nolocaldups.bed --sbed=sorghum.nolocaldups.bed
 
-Given a blast, we find the syntenic regions for every single gene. The algorithm works by expanding the query gene to a window centered on the gene. A single linkage algorithm follows that outputs the synteny block. 
+Given a blast, we find the syntenic regions for every single gene. The algorithm
+works by expanding the query gene to a window centered on the gene. A single
+linkage algorithm follows that outputs the synteny block.
 
 The result looks like the following:
 Os01g0698300    Sb03g032090     S    7     +
 Os01g0698500    Sb03g032140     G    11    +
 
 The pairs (A, B) -- A is query, and then B is the syntenic region found
-G is "Gray gene", which means it does not have match to the region (fractionated or inserted). In this case, a right flanker is used to represent the region.
-S is "Syntelog", which means it has a match to the region. In this case, the match itself is used to represent the region.
-The number in the 4th column is the synteny score. For the same query, it is ordered with decreasing synteny score. The last column means orientation. "+" is same direction.
+G is "Gray gene", which means it does not have match to the region (fractionated
+or inserted). In this case, a right flanker is used to represent the region.
+S is "Syntelog", which means it has a match to the region. In this case, the
+match itself is used to represent the region.
+
+The number in the 4th column is the synteny score. For the same query, it is
+ordered with decreasing synteny score. The last column means orientation. "+" is
+the same direction.
+
+Finally, accuracy can be improved if the raw BLAST is available for validation.
+The dup hits were removed in filtered BLAST, but should still be in the raw
+BLAST. We can have a 2nd pass at the raw BLAST, flipping any false 'proxy' or
+'syntelog'. In 2nd pass, we are not allowed to change the synteny score, only
+validating the hits. The validation is enabled by appending the following
+settings:
+
+    --lift rice_sorghum.blast --qbed=rice.bed --sbed=sorghum.bed
 """
 
 import sys
@@ -60,11 +76,11 @@ def get_flanker(group, query):
 
 def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
     # get all synteny blocks for a query, algorithm is single linkage
-    # anchors are a window centered on query 
+    # anchors are a window centered on query
     # two categories of syntenic regions depending on what query is:
     # (Syntelog): syntenic region is denoted by the syntelog
-    # (Gray gene): syntenic region is marked by the closest flanker 
-    
+    # (Gray gene): syntenic region is marked by the closest flanker
+
     regions = []
     ysorted = sorted(data, key=lambda x:x[1])
     g = Grouper()
@@ -73,7 +89,7 @@ def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
     next(b, None)
     for ia, ib in itertools.izip(a, b):
         pos1, pos2 = ia[1], ib[1]
-        if pos2 - pos1 < window and sbed[pos1].seqid==sbed[pos2].seqid: 
+        if pos2 - pos1 < window and sbed[pos1].seqid==sbed[pos2].seqid:
             g.join(ia, ib)
 
     #print list(g)
@@ -81,15 +97,15 @@ def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
     for group in sorted(g):
         (qflanker, syntelog), (far_flanker, far_syntelog), flanked = get_flanker(group, query)
 
-        # run a mini-dagchainer here, take the direction that gives us most anchors 
+        # run a mini-dagchainer here, take the direction that gives us most anchors
+        orientation = "+"
         if colinear:
             y_indexed_group = [(y, i) for i, (x, y) in enumerate(group)]
             lis = longest_increasing_subsequence(y_indexed_group)
             lds = longest_decreasing_subsequence(y_indexed_group)
-            
-            if len(lis) >= len(lds): 
+
+            if len(lis) >= len(lds):
                 track = lis
-                orientation = "+"
             else:
                 track = lds
                 orientation = "-"
@@ -99,7 +115,7 @@ def find_synteny_region(query, sbed, data, window, cutoff, colinear=False):
         xpos, ypos = zip(*group)
         score = min(len(set(xpos)), len(set(ypos)))
 
-        if qflanker==query: 
+        if qflanker==query:
             gray = "S"
         else:
             gray = "G" if not flanked else "F"
@@ -169,28 +185,32 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False):
 def main(blast_file, options):
     qbed_file, sbed_file = options.qbed, options.sbed
     sqlite = options.sqlite
-    
+
     print >>sys.stderr, "read annotation files %s and %s" % (qbed_file, sbed_file)
-    qbed = Bed(qbed_file)
-    sbed = Bed(sbed_file)
 
-    qorder = qbed.get_order()
-    sorder = sbed.get_order()
+    try:
+        qbed = Bed(qbed_file)
+        sbed = Bed(sbed_file)
+        qorder = qbed.get_order()
+        sorder = sbed.get_order()
 
-    fp = file(blast_file)
-    print >>sys.stderr, "read BLAST file %s (total %d lines)" % \
-            (blast_file, sum(1 for line in fp))
-    fp.seek(0)
-    blasts = sorted([BlastLine(line) for line in fp], \
-            key=lambda b: b.score, reverse=True)
+        fp = file(blast_file)
+        print >>sys.stderr, "read BLAST file %s (total %d lines)" % \
+                (blast_file, sum(1 for line in fp))
+        fp.seek(0)
+        blasts = sorted([BlastLine(line) for line in fp], \
+                key=lambda b: b.score, reverse=True)
 
-    all_data = []
-    for b in blasts:
-        query, subject = b.query, b.subject
-        if query not in qorder or subject not in sorder: continue
-        qi, q = qorder[query]
-        si, s = sorder[subject]
-        all_data.append((qi, si))
+        all_data = []
+        for b in blasts:
+            query, subject = b.query, b.subject
+            if query not in qorder or subject not in sorder: continue
+            qi, q = qorder[query]
+            si, s = sorder[subject]
+            all_data.append((qi, si))
+
+    except IndexError:
+        print >>sys.stderr, "No results were found in the query or source bed file"
 
     c = None
     if options.sqlite:
@@ -229,11 +249,17 @@ if __name__ == '__main__':
     params_group = optparse.OptionGroup(parser, "Synteny parameters")
     params_group.add_option("--window", dest="window", type="int", default=40,
             help="synteny window size [default: %default]")
-    params_group.add_option("--cutoff", dest="cutoff", type="float", default=.1, 
+    params_group.add_option("--cutoff", dest="cutoff", type="float", default=.1,
             help="the minimum number of anchors to call synteny [default: %default]")
     supported_scoring = ("collinear", "density")
     params_group.add_option("--scoring", dest="scoring", choices=supported_scoring, default="collinear",
             help="scoring scheme, must be one of " + str(supported_scoring) +" [default: %default]")
+
+    params_group = optparse.OptionGroup(parser, "Accuracy improvement")
+    params_group.add_option("--lift",
+            help="Raw BLAST file for validation [default: disabled]")
+    params_group.add_option("--qbedlift", help="Path to qbed for validation")
+    params_group.add_option("--sbedlift", help="Path to sbed for validation")
 
     parser.add_option_group(coge_group)
     parser.add_option_group(params_group)
