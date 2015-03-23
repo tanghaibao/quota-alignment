@@ -32,6 +32,7 @@ settings:
     --lift rice_sorghum.blast --qbed=rice.bed --sbed=sorghum.bed
 """
 
+
 import sys
 import sqlite3
 import itertools
@@ -43,6 +44,9 @@ sys.path.insert(0, op.join(op.dirname(__file__), ".."))
 from grouper import Grouper
 from bed_utils import Bed, BlastLine
 from lis import longest_increasing_subsequence, longest_decreasing_subsequence
+
+
+__version__ = "0.5.3"
 
 
 def transposed(data):
@@ -132,7 +136,8 @@ def find_synteny_region(query, sbed, data, window, cutoff, colinear=True):
     return sorted(regions, key=lambda x: -x[-1]) # decreasing synteny score
 
 
-def validate_syntelog(query, syn_region, qstore, qrank, srank, window, verbose=True):
+def validate_syntelog(query, syn_region, qstore, qrank, srank, window,
+                      verbose=False):
     """
     Validate syntelog calls using the lift BLAST. This improves the accuracy of
     the original one-pass algorithm. Since localdups were removed during the
@@ -171,19 +176,19 @@ def validate_syntelog(query, syn_region, qstore, qrank, srank, window, verbose=T
     new_region = syntelog, left, right, gray, orientation, score
 
     if verbose:
+        print >> sys.stderr
         print >> sys.stderr, "[STATUS] {0}".format(status)
         print >> sys.stderr, "Found hits: {0}".format(all_hits)
         print >> sys.stderr, "Flankers {0} converted to {1}".\
                                 format((left, right), (sleft, sright))
         print >> sys.stderr, "Before: {0} => {1}".format(query, syn_region)
         print >> sys.stderr, "After : {0} => {1}".format(query, new_region)
-        print >> sys.stderr
 
     return new_region, updated
 
 
 def batch_query(qbed, sbed, all_data, options, c=None, transpose=False,
-                lift=None):
+                lift=None, verbose=False):
 
     cutoff = int(options.cutoff * options.window)
     window = options.window / 2
@@ -223,14 +228,15 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False,
                 if lift:
                     syn_region, lift_update = validate_syntelog(r, syn_region,
                                                                 qstore, qrank,
-                                                                srank, window)
+                                                                srank, window,
+                                                                verbose=options.verbose)
 
                 syntelog, left, right, gray, orientation, score = syn_region
 
                 left_chr, left_pos = simple_bed(left)
                 right_chr, right_pos = simple_bed(right)
 
-                anchor = sbedlift[syntelog] if lift_update else sbed[syntelog].accn
+                anchor = sbedlift[syntelog].accn if lift_update else sbed[syntelog].accn
                 anchor_chr, anchor_pos = simple_bed(syntelog)
                 # below is useful for generating the syntenic region in the coge url
                 left_dist = abs(anchor_pos - left_pos) if anchor_chr==left_chr else 0
@@ -242,8 +248,7 @@ def batch_query(qbed, sbed, all_data, options, c=None, transpose=False,
                 if sqlite:
                     c.execute("insert into synteny values (?,?,?,?,?,?,?,?)", data)
                 else:
-                    pass
-                    #print "\t".join(str(x) for x in data)
+                    print "\t".join(str(x) for x in data)
 
 
 def build_order(qbed_file, sbed_file):
@@ -273,13 +278,13 @@ def build_rank_mapping(bed, neworder):
 
 def build_store(all_data):
     """
-    Data structure for fast extraction of lift BLAST (raw BLAST).
+    Data structure for fast extraction of lift BLAST (raw BLAST). Since all_data
+    was already sorted by descending score, the values in the store are also
+    sorted by descending score (i.e. first one is best hit).
     """
     print >> sys.stderr, "Build hit store for validation"
     qstore = defaultdict(list)
     sstore = defaultdict(list)
-    # Since all_data was already sorted by descending score, the values in the
-    # store are also sorted by descending score (i.e. first one is best hit)
     for q, s in all_data:
         qstore[q].append(s)
         sstore[s].append(q)
@@ -304,7 +309,7 @@ def read_blast(blast_file, qorder, sorder):
     return all_data
 
 
-def main(blast_file, opts):
+def main(blast_file, opts, cmd):
     sqlite = opts.sqlite
     lift = opts.lift
     try:
@@ -326,6 +331,9 @@ def main(blast_file, opts):
     if sqlite:
         conn = sqlite3.connect(sqlite)
         c = conn.cursor()
+        c.execute("drop table if exists meta")
+        c.execute("create table meta (version text, cmd text)")
+        c.execute("insert into meta values (?,?)", (__version__, cmd))
         c.execute("drop table if exists synteny")
         c.execute("create table synteny (query text, anchor text, gray varchar(1), score integer, dr integer, "
                 "orientation varchar(1), qnote text, snote text)")
@@ -342,7 +350,8 @@ def main(blast_file, opts):
 if __name__ == '__main__':
     import optparse
 
-    parser = optparse.OptionParser(__doc__)
+    parser = optparse.OptionParser(__doc__, \
+                                  version="%prog {0}".format(__version__))
     parser.add_option("--qbed", dest="qbed",
             help="path to qbed")
     parser.add_option("--sbed", dest="sbed",
@@ -365,19 +374,23 @@ if __name__ == '__main__':
     params_group.add_option("--scoring", dest="scoring", choices=supported_scoring, default="collinear",
             help="scoring scheme, must be one of " + str(supported_scoring) +" [default: %default]")
 
-    params_group = optparse.OptionGroup(parser, "Accuracy improvement")
-    params_group.add_option("--lift",
+    lift_group = optparse.OptionGroup(parser, "Accuracy improvement")
+    lift_group.add_option("--lift",
             help="Raw BLAST file for validation [default: disabled]")
-    params_group.add_option("--qbedlift", help="Path to qbed for validation")
-    params_group.add_option("--sbedlift", help="Path to sbed for validation")
+    lift_group.add_option("--qbedlift", help="Path to qbed for validation")
+    lift_group.add_option("--sbedlift", help="Path to sbed for validation")
+    lift_group.add_option("--verbose", default=False, action="store_true",
+            help="Debug lift procedure")
 
     parser.add_option_group(coge_group)
     parser.add_option_group(params_group)
+    parser.add_option_group(lift_group)
 
     (options, blast_files) = parser.parse_args()
 
     if not (len(blast_files) == 1 and options.qbed and options.sbed):
         sys.exit(parser.print_help())
 
-    main(blast_files[0], options)
+    cmd = " ".join(sys.argv)
+    main(blast_files[0], options, cmd)
 
