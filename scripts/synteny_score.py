@@ -339,7 +339,10 @@ def main(blast_file, opts, cmd):
                 "orientation varchar(1), qnote text, snote text)")
 
     batch_query(qbed, sbed, all_data, options, c=c, transpose=False, lift=lift)
-    batch_query(qbed, sbed, all_data, options, c=c, transpose=True, lift=lift)
+    if qbed.filename == sbed.filename:
+        print >> sys.stderr, "Self comparison, mirror ignored"
+    else:
+        batch_query(qbed, sbed, all_data, options, c=c, transpose=True, lift=lift)
 
     if sqlite:
         c.execute("create index q on synteny (query)")

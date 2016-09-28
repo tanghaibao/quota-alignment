@@ -261,7 +261,7 @@ between gene A and B is defined::
 Typically, after the ``blast_to_raw.py``, we can do the ``quota_align.py``
 directly::
 
-    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --quota=1:4 athaliana_grape.raw
+    quota_align.py --format=raw --merge --Dm=20 --min_size=5 --quota=4:1 athaliana_grape.raw
 
 Plot dot plot
 :::::::::::::::::::::
