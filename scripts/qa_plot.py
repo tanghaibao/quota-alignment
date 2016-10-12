@@ -137,6 +137,8 @@ if __name__ == "__main__":
             help="path to sbed")
     parser.add_option("--bpscale", default=False, action="store_true",
             help="Use actual bp position in bed file [default: %default]")
+    parser.add_option("--outfmt", default="png",
+            help="format of output plot. support: png, pdf, ps, eps and svg [default: %default]")
 
     (options, args) = parser.parse_args()
 
@@ -148,5 +150,5 @@ if __name__ == "__main__":
 
     qa_file = args[0]
 
-    image_name = op.splitext(qa_file)[0] + ".png"
+    image_name = op.splitext(qa_file)[0] + "." + options.outfmt
     dotplot(qa_file, qbed, sbed, image_name, bpscale=options.bpscale)
