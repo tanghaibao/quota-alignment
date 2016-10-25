@@ -5,8 +5,8 @@ import argparse
 import re
 
 """
-this script aims to remove the specified chromosome(s) in bed and pep file.
-you can specify a exact name of a chromosome or use a regular expression.
+This script aims to remove the specified chromosome(s) in bed and pep file.
+You can remove a chromosome or a set of chromosomes by using a regular expression.
 """
 
 def handle_bed(infile, chrname):
