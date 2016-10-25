@@ -62,7 +62,7 @@ def draw_box(fp, ax, color="b"):
                                 ec=color, fill=False, lw=.2))
 
 
-def dotplot(qa_file, qbed, sbed, image_name, bpscale=False, remove=""):
+def dotplot(qa_file, qbed, sbed, image_name, bpscale=False, remove=None):
 
     qa = Raw(qa_file)
     qa_fh = file(qa_file)
@@ -143,9 +143,10 @@ if __name__ == "__main__":
             help="Use actual bp position in bed file [default: %default]")
     parser.add_option("--outfmt", default="png",
             help="format of output plot. support: png, pdf, ps, eps and svg [default: %default]")
-    parser.add_option("--remove", default="",
-            help="remove chromosome breaks and labels from query genome (--remove=q) or \
-            subject genome (--remove=s) or both (--remove=qs) [default: %default]")
+    parser.add_option("--remove", default=None,
+            help="remove chromosome breaks and labels from query genome \
+            (--remove=q) or from subject genome (--remove=s) or from \
+            both of them (--remove=qs) [default: %default]")
     
     (options, args) = parser.parse_args()
 
