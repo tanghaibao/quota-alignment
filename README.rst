@@ -46,7 +46,7 @@ Installation
 
 **Required dependencies**
 
-- Python version >=2.6
+- Python version >=2.7
 
 - GNU linear programming kit `GLPK <http://www.gnu.org/software/glpk/>`_.
 
@@ -81,7 +81,7 @@ Cookbook
 -------------------------
 Default package comes with the test data for case 1 and 2 in ``run.sh``. More
 test data set can be downloaded `here
-<http://chibba.agtec.uga.edu/duplication/data/quota-align-test.tar.gz>`_.
+<http://chibba.agtec.uga.edu/duplication/index/downloads/>`_.
 Unpack into the folder, and execute ``run.sh``.
 
 BLAST anchors chaining and quota-based screening
