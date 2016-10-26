@@ -62,7 +62,7 @@ def draw_box(fp, ax, color="b"):
                                 ec=color, fill=False, lw=.2))
 
 
-def dotplot(qa_file, qbed, sbed, image_name, bpscale=False):
+def dotplot(qa_file, qbed, sbed, image_name, bpscale=False, remove=None):
 
     qa = Raw(qa_file)
     qa_fh = file(qa_file)
@@ -85,24 +85,28 @@ def dotplot(qa_file, qbed, sbed, image_name, bpscale=False):
 
     xchr_labels, ychr_labels = [], []
     # plot the chromosome breaks
-    for (seqid, beg, end) in get_breaks(qbed, bpscale=bpscale):
-        xchr_labels.append((seqid, (beg + end)/2))
-        ax.plot([beg, beg], ylim, "g-", alpha=.5)
+    if remove not in ("qs", "sq", "q"):
+        for (seqid, beg, end) in get_breaks(qbed, bpscale=bpscale):
+            xchr_labels.append((seqid, (beg + end)/2))
+            ax.plot([beg, beg], ylim, "g-", alpha=.5)
 
-    for (seqid, beg, end) in get_breaks(sbed, bpscale=bpscale):
-        ychr_labels.append((seqid, (beg + end)/2))
-        ax.plot(xlim, [beg, beg], "g-", alpha=.5)
+    if remove not in ("qs", "sq", "s"):
+        for (seqid, beg, end) in get_breaks(sbed, bpscale=bpscale):
+            ychr_labels.append((seqid, (beg + end)/2))
+            ax.plot(xlim, [beg, beg], "g-", alpha=.5)
 
     # plot the chromosome labels
-    for label, pos in xchr_labels:
-        pos = .1 + pos * .8/xlim[1]
-        root.text(pos, .93, r"%s" % label, color="b",
-            size=9, alpha=.5, rotation=45)
+    if remove not in ("qs", "sq", "q"):
+        for label, pos in xchr_labels:
+            pos = .1 + pos * .8/xlim[1]
+            root.text(pos, .93, r"%s" % label, color="b",
+                size=9, alpha=.5, rotation=45)
 
-    for label, pos in ychr_labels:
-        pos = .1 + pos * .8/ylim[1]
-        root.text(.91, pos, r"%s" % label, color="b",
-            size=9, alpha=.5, ha="left", va="center")
+    if remove not in ("qs", "sq", "s"):
+        for label, pos in ychr_labels:
+            pos = .1 + pos * .8/ylim[1]
+            root.text(.91, pos, r"%s" % label, color="b",
+                size=9, alpha=.5, ha="left", va="center")
 
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -139,7 +143,11 @@ if __name__ == "__main__":
             help="Use actual bp position in bed file [default: %default]")
     parser.add_option("--outfmt", default="png",
             help="format of output plot. support: png, pdf, ps, eps and svg [default: %default]")
-
+    parser.add_option("--remove", default=None,
+            help="remove chromosome breaks and labels from query genome \
+            (--remove=q) or from subject genome (--remove=s) or from \
+            both of them (--remove=qs) [default: %default]")
+    
     (options, args) = parser.parse_args()
 
     if not (len(args) == 1 and options.qbed and options.sbed):
@@ -151,4 +159,4 @@ if __name__ == "__main__":
     qa_file = args[0]
 
     image_name = op.splitext(qa_file)[0] + "." + options.outfmt
-    dotplot(qa_file, qbed, sbed, image_name, bpscale=options.bpscale)
+    dotplot(qa_file, qbed, sbed, image_name, bpscale=options.bpscale, remove=options.remove)
