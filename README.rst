@@ -96,7 +96,7 @@ post-processing`_, in particular on filtering BLAST output::
     1       9       1       4846    14
 
 Where the five columns correspond to ``chr1``, ``pos1``, ``chr2``, ``pos2``,
-and ``log10(E-value)``. Then we can do something like::
+and ``-log10(E-value)``. Then we can do something like::
 
     quota_align.py --format=raw --merge --Dm=20 --min_size=5 --quota=2:1 maize_sorghum.qa
 
